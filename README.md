@@ -1,142 +1,55 @@
-# Grok Bot 式 Agent 团队（DeepSeek Harness）
+# 五人 Agent 团队（单会话模式）
 
-把 Grok Bot 的"成员制 bot + 团队协作"落成 DSH 原生机制：**5 个 Agent Preset**（身份层）
-+ **Agent Teams**（协作层）+ **本地 Markdown 账本**（项目层）。
+一个会话里由 Lead 拉起 **5 个固定角色队友**，靠文件驱动的团队规范协作。
+仿照 `zq/.devenv/team/` 的工作模式，不依赖 Agent Preset，也不需要安装任何插件。
 
-## 1. 架构：为什么是三层
+## 怎么用（新会话三步）
 
-Grok Bot 里"bot"同时是身份、技能包、集成、例行程序。DSH 把这些拆在不同层次，且
-`spawn_teammate` **不能指定 preset 或模型**——队友继承 Lead 会话的 preset。所以不能
-"在一个团队会话里塞 5 个不同人格"，必须分层：
+1. 新开会话，工作目录指向本项目。
+2. 发一句话给 Lead：
 
-```
-┌ 身份层 ───────────────────────────────────────────────┐
-│ 5 个 Agent Preset：pm / audit / englead / qa / tinkabot │
-│ 每个 preset = persona(记忆) + 技能目录 + 工具集          │
-│ 你「新建会话」时选一个角色 → 就是那个 bot 在你的席位上工作 │
-└───────────────────────────────────────────────────────┘
-┌ 协作层 ───────────────────────────────────────────────┐
-│ Agent Teams：spawn_teammate / send_message / wait_agent │
-│ 共享任务板：team_task_*(owner, blocked_by, revision)    │
-│ 任一席位在自己的会话里可当 Lead，拉同名 preset 的队友并行 │
-└───────────────────────────────────────────────────────┘
-┌ 项目层 ───────────────────────────────────────────────┐
-│ projects/<name>/：project.md + tasks.md + qa/ + notes/  │
-│ 跨 bot 调度 = 认领制（任务卡 + 定时巡场），不是编排器     │
-└───────────────────────────────────────────────────────┘
-```
+   ```
+   按 <TEAM_DIR>/team/TEAM_PROMPT.md 初始化五人团队，然后汇报报到结果
+   ```
 
-## 2. 成员
+3. Lead 会建 5 条任务 → 按 `ROLE_PROMPTS.md` 逐个 `spawn_teammate` → 等回执 → 把报到结论写进 `team/BOARD.md`。
 
-| preset id | 名称 | 席位职责 | 专属技能 |
-|---|---|---|---|
-| `pm` | Projects Manager | 立项、拆卡、分派、追状态、升级阻塞；**不亲自做专业工作** | `pm-project-ops` |
-| `audit` | Nightly Audit Engineer | 夜间整树研究 + 每个 area 一个 cleanup | `audit-codebase-research`、`audit-one-cleanup-per-area` |
-| `englead` | Engineering Lead | 拥有闭环：拆解 → 派工 → 追 CI → 摘要 | `eng-lead-decompose`、`eng-lead-chase`、`eng-lead-digest` |
-| `qa` | QA Bot | AC 包 → BLOCK/WARN → `PASS \| FAIL \| BLOCKED` | `qa-ac-fail-gate`、`qa-adhd-response` |
-| `tinkabot` | tinkabot | 把 API 封成 bundle（MCP + skills），本地证明后再谈发布 | `tinkabot-wrap-api-as-plugin`、`tinkabot-publish-plugin` |
+之后的活都同一句派：**「把 <目标> 建成任务派给对应角色」**。
 
-所有席位额外共享 `skills/_team/team-protocol`（账本、认领、团队工具的协作契约）。
+## 五个固定角色
 
-## 3. 目录
-
-| Path | 作用 | 谁写 |
+| 角色 | 职责 | 写入范围 |
 |---|---|---|
-| `TEMPLATE.md` | 源文件格式契约 | Lead |
-| `agents/<id>.md` | 人格 + 记忆 + 操作准则（**源**） | 各席位 |
-| `skills/<id>/<skill>/SKILL.md` | 席位专属技能 | 各席位 |
-| `skills/_team/team-protocol/SKILL.md` | 共享协作契约 | Lead |
-| `scripts/build-bundle.mjs` | 源 → `team-bundle/cordis.patch.yml` | Lead |
-| `scripts/validate-bundle.mjs` | 安装前校验 | Lead |
-| `team-bundle/` | **产物**，可安装的 DSH bundle | 生成，勿手改 |
-| `projects/<name>/` | 项目账本（`_template/` 是脚手架） | 各席位 |
-| `routines/` | 例行程序的 schedule_create 参数形状 | Lead |
+| `pm` | 项目账本管理员：立项、拆卡、分派、追状态、升级阻塞 | `team/BOARD.md`、`projects/**` |
+| `englead` | 代码域执行与评审：拆解 → 实现 → 自检 → 交 Review | 按任务卡指定的代码与本地配置 |
+| `audit` | 全树审计：研究全仓 → 每个 area 至多一次 cleanup | 审计分支、`team/notes/audit-*.md` |
+| `qa` | 验收门：AC 包 → `PASS \| FAIL \| BLOCKED` | `projects/<name>/qa/**` |
+| `tinkabot` | 插件封装：API → bundle，本地证明后才谈发布 | `plugins/**`、`team/skills/tinkabot/**` |
 
-## 4. 快速开始
-
-```bash
-cd <TEAM_DIR>
-
-node scripts/build-bundle.mjs      # 生成 team-bundle/cordis.patch.yml
-node scripts/validate-bundle.mjs   # 校验：YAML、preset 字段、技能目录、!!js 位置
-```
-
-安装（在 DSH 会话里对 Lead 说，或直接调工具）：
+## 目录
 
 ```
-plugin_manager {
-  action: "install_bundle",
-  target: "<TEAM_DIR>/team-bundle"
-}
+team/
+├── TEAM_PROMPT.md      # 团队规范 + 初始化流程 + 通用 spawn 模板 + 角色表
+├── ROLE_PROMPTS.md     # 五角色全文（职责/边界/写入范围/验收/技能/文档责任）
+├── DOC_PROTOCOL.md     # 文档管理机制（SSOT 分层 / 四态分离 / 裁决留痕 / 防膨胀）
+├── BOARD.md            # 任务板归档（Lead 维护）
+├── PLUGIN_DESIGN.md    # dsh-team-bot 自动建团设计（待审核）
+├── personas/<id>.md    # 人格与常驻记忆（队友开工前读一次）
+└── skills/<id>/...     # 角色技能（可执行流程：When to use / Procedure / Output / Failure）
+projects/               # 项目账本：_template/ 含 project/STATUS/tasks/DECISIONS/ITERATIONS
+routines/               # 例行程序（schedule_create 参数形状）
 ```
 
-装完在 **新建会话 → 角色选择** 里会多出这 5 个 bot（和 standard/ptc/minimal/cordis 并列）。
-安装需要 Full access 或审批：bundle 声明会以 YAML 形式在 Host 进程里执行插件。
+## 三条硬约束
 
-> **当前状态：已安装并启用**（`@local/dsh-grok-team@1.0.0`，见第 9 节验证记录）。
-> 已有会话保留启动时的插件版本；要看到新的 5 个角色，请刷新页面后**新建会话**。
+1. **只有 Lead 能 spawn 和 interrupt。** 队友可以互相 `send_message`，但需要更多人手只能把方案交回 Lead。
+2. **队友共享同一个工作目录和同一套工具。** 角色差异完全靠 prompt + `team/personas/` + `team/skills/` 表达；
+   队友不能各自换模型。
+3. **写作用域按文件切。** 两个角色写同一个文件就是冲突，冲突由 Lead 仲裁。
 
-**改了人格/技能之后**：重新 `build-bundle` → 重新 `install_bundle` → **新建会话**验证。
-已有会话保留它启动时的插件版本，旧会话看不到改动。
+## 和上一版（Agent Preset）的区别
 
-## 5. 跑一个项目
-
-1. 新建会话，角色选 **Projects Manager**，工作目录选目标仓库。
-2. 说清楚目标与成功标准。PM 会 `cp projects/_template/` 建项目目录、写 `project.md`，
-   再按 area 拆卡写进 `tasks.md`，并为每张卡建共享任务（`team_task_create`）。
-3. 换一个会话，角色选执行席位（如 `englead`），让它 `team_task_list` → 认领 → 干活 →
-   把卡移到 `Review`。
-4. 需要并行时，由该会话的席位当 Lead：`spawn_teammate` 派工，`wait_agent` 等变化，
-   `team_task_update` 收敛状态。Lead 自己不下场做专业工作。
-5. QA：角色 `qa`，跑 AC 包 → `projects/<name>/qa/run-YYYY-MM-DD-<slug>.md`。
-
-任务卡格式（字段由 `pm` 定义，别分叉）：
-`Id` `Status` `Owner` `Scope` `Depends on` `Blocked by` `Acceptance` `Note`；
-状态词表 `Todo · In Progress · Blocked · Review · Done`。
-
-## 6. 例行程序
-
-`routines/nightly-audit.md` 有可直接粘贴的 `schedule_create` 形状（04:00 每日）。
-**定时任务继承创建时会话的 preset 与工作目录**——所以必须在目标席位的会话里创建，
-否则醒来的不是那个 bot。创建后先用 `schedule_list` 确认时区，首次投递要求 bot 先问 owner。
-
-## 7. 与 Grok Bot 的已知差异
-
-| Grok Bot | 本方案 | 影响 |
-|---|---|---|
-| bot 绑定模型 | 模型是**会话级**选择 | 同一 bot 可换模型；无法在 preset 里锁死 |
-| 一个团队含多种 bot | 队友继承 Lead 的 preset | 异构 bot 并存 = 换会话，不是同一队 |
-| Notion Projects/Tasks | 本地 Markdown 账本 | 无多端同步；换来可 diff、可 blame、可离线 |
-| Cloud Agent | Agent Teams 队友 | 共享同一 cwd，无 worktree 隔离 |
-| GitHub PR / Vercel | 分支+提交+Review 卡；bash 比对 SHA | 无自动 PR 监听，靠 `send_message` 触发 |
-| pstack 插件 | 无等价物 | tinkabot 会明说缺席并给替代做法 |
-| Marketplace 发布 | 无 | 只能产出本地 bundle |
-
-## 8. 维护
-
-- **单一真源是 `agents/` 和 `skills/`**，`team-bundle/cordis.patch.yml` 永远是生成物。
-- 新增席位：按 `TEMPLATE.md` 写 `agents/<id>.md` + `skills/<id>/`，在
-  `scripts/build-bundle.mjs` 的 `ROLE` 表里加一行（决定 plan/goal 能力）。
-- 生成文件里 `customSkillDirs` 是**绝对路径**。搬动本目录后必须重新 build + 重新 install。
-- 想稳定到 `~/.dsh/team/`：整目录搬过去再重建重建即可，逻辑不变。
-
-## 9. 安装验证记录
-
-| 检查项 | 结果 |
-|---|---|
-| `validate-bundle.mjs` | OK — 5 preset / 94 plugin row / 784 行 |
-| bundle 安装 | `@local/dsh-grok-team@1.0.0` → profile bundles 列表末位 |
-| Loader 挂载 | `preset-pm` / `preset-audit` / `preset-englead` / `preset-qa` / `preset-tinkabot` 全部 `enabled: true, fiberPhase: active` |
-| Config schema | 9 条 `@deepseek-ai/dsh-agent-preset` 条目（原 4 + 新 5）均可查询 |
-| 技能目录 | 11 个 `SKILL.md`（10 席位技能 + 1 共享协议），`customSkillDirs` 绝对路径全部存在 |
-
-**尚未验证（需要你操作一次）**：新会话里实际选中某个 bot 后，persona 是否按预期生效、
-该席位的技能目录是否只出现在它的目录下。前者看开场自称，后者看 `skill` 工具列出什么。
-
-**回滚**：`plugin_manager { action: "set_bundle", target: "@local/dsh-grok-team", enabled: false }`
-（或 `remove_bundle`）。停用不影响仓库里任何文件。
-
-## 10. 版本控制
-
-本仓库已 `git init`（`main` 分支，首个提交 `c8a099c`）。账本之所以可信，是因为它可 diff、
-可 blame、可回滚——"只存在于聊天里的状态等于没发生"这条规则依赖于此。
+上一版把 5 个角色做成了 5 个 preset（每次新建会话选一个），已按你的要求**回滚并从 profile 卸载**。
+这一版是「一个会话、一个 Lead、五个持久队友」：换会话就按 `TEAM_PROMPT.md` 重建，
+角色定义活在文件里而不是会话历史里。
