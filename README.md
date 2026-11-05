@@ -12,7 +12,7 @@
    按 <TEAM_DIR>/team/TEAM_PROMPT.md 初始化四人团队，然后汇报报到结果
    ```
 
-3. Lead 会建 5 条任务 → 按 `ROLE_PROMPTS.md` 逐个 `spawn_teammate` → 等回执 → 把报到结论写进 `team/BOARD.md`。
+3. Lead 会建 4 条任务 → 按 `ROLE_PROMPTS.md` 逐个 `spawn_teammate` → 等回执 → 把报到结论写进 `team/BOARD.md`。
 
 之后的活都同一句派：**「把 <目标> 建成任务派给对应角色」**。
 
