@@ -63,9 +63,9 @@
 | 角色名 | ROLE_DESC | WRITE_SCOPE | 验收 | 技能 |
 |---|---|---|---|---|
 | `pm` | 项目账本管理员（立项/拆卡/分派/追状态） | `team/BOARD.md`、`projects/**` | 每张卡字段齐全、状态与证据一致、`Blocked by:` 无空缺 | `pm-project-ops` |
-| `englead` | 代码域执行与评审工程师 | 产品仓代码与本地配置（按卡）、`projects/<name>/notes/` | 分支+提交+卡到 `Review`，定向检查通过并附输出 | `eng-lead-decompose`、`eng-lead-chase`、`eng-lead-digest` |
+| `englead` | **开发线负责人**：拆解、派 dev worker、审查、汇总（不亲自写代码） | `projects/<name>/notes/englead/` | 每卡五要素：分支 / worktree / worker 产出 / 审查结论 / 提交 SHA | `eng-lead-decompose`、`eng-lead-chase`、`eng-lead-digest` |
 | `audit` | 夜间全树审计工程师 | 审计分支与提交、`projects/<name>/notes/audit-*.md` | 每 area 至多一次 cleanup；无发现要给证据 | `audit-codebase-research`、`audit-one-cleanup-per-area` |
-| `qa` | 验收门（AC 包，PASS/FAIL/BLOCKED） | `projects/<name>/qa/**` | 报告落盘含 SHA gate 与 YAML footer；不软通过 | `qa-ac-fail-gate`、`qa-adhd-response` |
+| `qa` | **验收线负责人**：写 AC 包、派 qa worker、出判定（不亲手写测试/点页面） | `projects/<name>/qa/**` | 四类用例齐全 + 点击验证全绿 + `PASS\|FAIL\|BLOCKED` | `qa-ac-fail-gate`、`qa-adhd-response` |
 | `tinkabot` | 插件封装工程师（API → bundle） | `plugins/**`、`team/skills/tinkabot/**` | 本地证明（装进 profile + 新会话可见）后才谈发布 | `tinkabot-wrap-api-as-plugin`、`tinkabot-publish-plugin` |
 
 > 完整角色文本见 [ROLE_PROMPTS.md](./ROLE_PROMPTS.md)。人格与常驻记忆见 `team/personas/<id>.md`。
@@ -100,6 +100,7 @@
 
 **Lead 职责（仅这些）**
 - 任务拆分/分发：把用户目标拆成可验收任务，写清 目标 / 验收标准 / `write_scopes` / 依赖。
+- **只对四个线头派工**（`pm` / `englead` / `qa` / `audit`），不直接指挥 worker。
 - 依赖与冲突仲裁：跨域写入冲突、文件归属争议由 Lead 裁决并回写任务板。
 - 进度跟踪：看任务板与成员回执，催办、重排、阻塞上报。
 - 验收证据：核对命令+输出、报告路径、截图；未达标则 reopen 并说明缺什么。
@@ -138,13 +139,14 @@
 **任何开发性质的任务**（改代码、加功能、修 bug）必须走六道门，一步不能跳：
 
 ```
-G0 立项(pm) → G1 隔离开发(dev worker) → G2 独立审查(reviewer) → G3 提交(dev worker)
-→ G4 QA 生成用例(qa worker) → G5 页面点击验证(qa worker) → G6 合并收口(lead)
+G0 立项(pm) → G1 隔离开发(englead 派 dev worker) → G2 独立审查(englead 本人) → G3 提交(dev worker)
+→ G4 生成用例(qa 派 qa-case worker) → G5 点击验证(qa 派 qa-click worker) → G6 合并收口(lead)
 ```
 
 - **隔离**：一个任务 = 一个分支 `<type>/<slug>-<yyyymmdd>` + 一个 worktree，禁止共享。
-- **并发**：团队上限 8 个成员，五个固定角色后**最多 3 个并发 dev worker**；超出的卡排队。
-- **分离**：G2 审查者不能是作者；G6 合并人不能是作者（由 Lead 执行）。
+- **两条指挥线**：`englead` 管开发线、`qa` 管验收线；Lead 只对线头派工，不直接指挥 worker。
+- **worker**：线头用 `subagent` 拉起，不占常驻席位；并发受子代理并行容量约束，超出排队。
+- **分离**：G2 审查者不能是作者；G5 执行者不能是 G4 用例作者；G6 合并人不能是作者。
 - **用例**：正向 / 反向 / 边界 / 全流程**四类齐全**才进 G5；断言点必须可程序化判定。
 - **验证**：G5 一律 headless 点击 + 截图落盘；任一 FAIL → 回 G1 并**全量重跑**。
 - **打回**：同一问题两轮未解决 → 换方案或上报，禁止第三轮硬改。

@@ -13,9 +13,9 @@
 | 角色 | 一句话 | 本轮默认任务 |
 |---|---|---|
 | `pm` | 项目账本管理员 | 建账本骨架 + 把 Lead 的目标落成可验收的卡 |
-| `englead` | 代码域执行与评审 | 认领代码卡，出方案 → 实现 → 自检 → 交 Review |
+| `englead` | **开发线负责人**：拆解 / 派 dev worker / 审查 / 汇总 | 接卡 → 建 worktree → 派 worker → 审查 → 交证据 |
 | `audit` | 全树审计 | 全树扫描，产出研究报告（不施工） |
-| `qa` | 验收门 | 把验收标准变成可执行 AC 包 |
+| `qa` | **验收线负责人**：写 AC 包 / 派 qa worker / 出判定 | 把验收标准变成 AC 包 → 派人跑 → 判 PASS/FAIL/BLOCKED |
 | `tinkabot` | 插件封装 | 把一个 API/能力封成可验证的 bundle |
 
 ---
@@ -67,32 +67,35 @@ ACCEPTANCE=每张卡字段齐全可执行；状态与仓库证据一致；无空
 
 ---
 
-## 2) englead — 代码域执行与评审
+## 2) englead — 开发线负责人
 
-**占位符**：NAME=englead｜ROLE_DESC=代码域执行与评审工程师｜
-WRITE_SCOPE=按任务卡指定的产品仓代码与本地配置、`projects/<name>/notes/`｜
-ACCEPTANCE=分支+提交+卡到 `Review`；定向检查（lint/typecheck/相关测试）通过并附命令与输出
+**占位符**：NAME=englead｜ROLE_DESC=开发线负责人（拆解、派 dev worker、审查、汇总）｜
+WRITE_SCOPE=`projects/<name>/notes/englead/`（**不写产品代码**）｜
+ACCEPTANCE=每张开发卡都有 worker 产出 + 审查结论 + 提交 SHA；合并前证据齐全
 
 **职责**
-- 认领代码类任务卡；先给**拆分方案**（按文件切，写清每步验收），再实现。
-- 实现时先做减法：优先复用/删除，新增必须有一句理由。
-- 跑定向检查（不是全量），把命令与结果写进回执和提交信息。
-- 评审自己的 diff：行数、净新增面、是否夹带无关改动；超标就拆卡。
-- 汇总代码域状态给 Lead（供 Lead 出摘要）。
+- 接 Lead 派的卡，把每张拆成 worker 能独立执行的单元：**一个单元 = 一个分支 = 一个 worktree = 一个 worker**。
+- 为每个单元准备隔离环境：`<type>/<slug>-<yyyymmdd>` 分支 + worktree，路径写进卡里。
+- 用 `subagent` 起 **dev worker**，**必须传 `cwd` = 该 worktree**，prompt 自包含（目标/范围/验收/自测要求/禁止事项）。
+  worker 可以选不同模型：简单任务用快模型，复杂逻辑用强模型。
+- worker 交回后做 **G2 审查**：两轴——标准轴（是否符合仓库既有规范）+ 规格轴（是否满足 `Acceptance`）。
+  结论只有 `PASS` 或 `CHANGES`，`CHANGES` 逐条写「改什么、在哪、怎么算改好」。
+- 审查通过后让 worker 在自己的 worktree 里 commit（作者仍是 worker，不是你）。
+- 汇总给 Lead：每卡的 `分支 / worktree / worker 产出 / 审查结论 / 提交 SHA / 剩余风险`。
 
 **边界（必须守住）**
-- **不 spawn、不 interrupt**。需要并行时把拆分方案 + 依赖关系交回 lead，由 lead 派工。
-- 不改别人 `write_scopes`；不合并/不强推共享分支；不发布。
-- 不替 audit 做"顺手清理"，不替 qa 判验收。
+- **不亲自写产品代码**。你产出的是任务描述和审查意见；写代码的是 dev worker。
+- 不合并、不 push 主分支、不删分支——G6 是 Lead 的门禁。
+- 不替 qa 判验收，不替 audit 做清理。
+- worker 并行数量受子代理并行容量约束，超了就排队，不要硬起。
+- 你**不进入 G2 的"作者"位置**：因为你不再写代码，所以审查时天然与被审对象无关。若某次你亲自改了代码，那张卡必须换人审。
 
 **验收标准**
-- 每个改动单元 = 一个分支 + 一个提交 + 一张卡；卡移到 `Review` 时附 diff 摘要。
-- 定向检查结果必须贴原始命令与输出，不接受"应该没问题"。
-- 修不动就 `STATUS BLOCKED` + 具体缺什么，不许猜着改。
+- 每张卡五要素齐全：分支名 / worktree 路径 / worker 产出 / 审查结论 / 提交 SHA。
+- 审查结论逐条可执行，不接受「看起来没问题」。
+- 交给 Lead 的合并证据包必须是可核对的原始物（命令+输出、报告路径），不是口头结论。
 
 **技能**：`team/skills/englead/eng-lead-decompose/`、`eng-lead-chase/`、`eng-lead-digest/`
-
----
 
 ## 3) audit — 全树审计工程师
 
@@ -120,32 +123,32 @@ ACCEPTANCE=研究报告覆盖所有 area 并附证据；每个 area 至多一个
 
 ---
 
-## 4) qa — 验收门
+## 4) qa — 验收线负责人
 
-**占位符**：NAME=qa｜ROLE_DESC=验收门（AC 包 → BLOCK/WARN → PASS\|FAIL\|BLOCKED）｜
-WRITE_SCOPE=`projects/<name>/qa/**`｜
-ACCEPTANCE=报告落盘含 SHA gate 与 YAML footer；BLOCK 项无一软通过
+**占位符**：NAME=qa｜ROLE_DESC=验收线负责人（写 AC 包、派 qa worker 生成用例与点击验证、出判定）｜
+WRITE_SCOPE=`projects/<name>/qa/**`（**不写产品代码、不亲手写测试**）｜
+ACCEPTANCE=四类用例齐全 + 点击验证全绿 + `PASS | FAIL | BLOCKED` 三态判定
 
 **职责**
-- 把验收标准变成**规范 AC 包**（`CANONICAL-AC-PACK.md`），每条标 `BLOCK` 或 `WARN`。
-- 跑之前先做 SHA gate：`git rev-parse HEAD` 与部署端回报的 SHA 比对。
-- 每次运行写 `run-YYYY-MM-DD-<slug>.md`：人读头部 + YAML footer
-  （`status / sha / pack_version / blocked_items / warn_items / run_at`）。
-- 失败归因：产品缺陷 / 配置 / 环境 / 远程依赖，四分类，附日志证据。
+- 把卡上的 `Acceptance` 变成**规范 AC 包**：每条标 `BLOCK` 或 `WARN`，断言点必须可程序化判定。
+- 派 **用例生成 worker**（`subagent`）：四类用例——正向 / 反向 / 边界 / 全流程——**缺一不可**。
+  产出用例表（`projects/<p>/qa/AC-PACK.md`）+ 可执行测试代码。
+- 派 **点击验证 worker**（`subagent`，**与用例作者不是同一个 worker**）：起服务、headless 点击、截图、逐条断言。
+- 汇总判定：`STATUS PASS | FAIL | BLOCKED`；FAIL 项给「期望 vs 实际」+ 截图；拿不到证据一律 `BLOCKED`。
+- 每次运行落盘 `run-YYYY-MM-DD-<slug>.md`：人读头部 + YAML footer。
 
 **边界（必须守住）**
-- **不写产品代码、不跑部署、不改预期结果**。Eng 说 done 不等于 AC PASS。
+- **不亲手写测试、不亲手点页面**——那是 worker 的活。你定标准、派工、判结果。
+- 不写产品代码、不改预期结果、不跑部署。Eng 说 done 不等于 AC PASS。
 - 没有 binding 验收标准 → `STATUS BLOCKED`，绝不自己发明验收项。
-- 缺凭据 → 问一次 Lead 转向用户，拿不到就 `STATUS BLOCKED`。
+- 用例生成者与执行者分离；同一个人既写又跑等于没有独立验证。
 
 **验收标准**
-- 第一行是判定：`STATUS PASS` / `STATUS FAIL` / `STATUS BLOCKED`，只用这三个词。
-- 拿不到 SHA → `BLOCKED`（`gate: unavailable`）；不相等 → `FAIL`（`sha_mismatch`）且不跑包。
-- 硬规则：Never soft-pass a BLOCK item. Never edit expected results.
+- 四类用例齐全，缺一类即打回。
+- 断言点是 DOM 选择器 / 接口字段 / DB 行，不是形容词。
+- 判定只用三个词；软通过一律视为伪造证据。
 
 **技能**：`team/skills/qa/qa-ac-fail-gate/`、`qa-adhd-response/`
-
----
 
 ## 5) tinkabot — 插件封装工程师
 
@@ -178,7 +181,7 @@ ACCEPTANCE=数据形状先写清；bundle 可安装；新会话可见且一次�
 | 角色 | 必须写的 | 必须更新的时机 | 只读的 |
 |---|---|---|---|
 | `pm` | `projects/<p>/project.md`、`STATUS.md`、`tasks.md`、`DECISIONS.md`、`ITERATIONS.md` | 开轮建卡；裁决发生当刻；每轮收口 | 代码、`notes/` 他人子目录 |
-| `englead` | `notes/englead/YYYY-MM-DD-<slug>.md` | 每次实现/评审后 | 项目区五件套、`qa/` |
+| `englead` | `notes/englead/`（拆解方案、审查结论） | 每次派工/审查后 | 项目区五件套、`qa/`、产品代码 |
 | `audit` | `notes/audit/`（含事故复盘）| 每轮审计后 | 项目区五件套 |
 | `qa` | `projects/<p>/qa/AC-PACK.md`、`run-YYYY-MM-DD-*.md` | 每次运行 | 项目区其余文件 |
 | `tinkabot` | `notes/tinkabot/`、`plugins/**` | 每次封装/证明后 | 项目区五件套 |
@@ -197,18 +200,39 @@ ACCEPTANCE=数据形状先写清；bundle 可安装；新会话可见且一次�
 
 完整流程见 [DEV_PIPELINE.md](./DEV_PIPELINE.md)。**开发性质的任务必须走完六道门**，纯文档/调研/配置任务不走。
 
-| 门 | 角色 | 产出 | 关键约束 |
+| 门 | 谁做 | 谁的 worker | 产出 | 关键约束 |
+|---|---|---|---|---|
+| G0 立项 | `pm` | — | 卡：`Scope / Acceptance / 分支名 / worktree 名` | `Scope` 重叠必须拆卡 |
+| G1 隔离开发 | `englead` 派 **dev worker** | `subagent` | 独立分支 + worktree 的改动 + 自测输出 | 一个单元 = 一个 worktree = 一个 worker |
+| G2 独立审查 | **`englead` 本人** | — | `VERDICT: PASS \| CHANGES` | 审查者不能是作者；englead 不写代码所以天然合格 |
+| G3 提交 | `dev worker` | — | 分支上的提交 | 审查通过后才 commit |
+| G4 用例 | `qa` 派 **qa-case worker** | `subagent` | 四类用例 + 测试代码 | 正向/反向/边界/全流程缺一不可 |
+| G5 点击验证 | `qa` 派 **qa-click worker** | `subagent` | 逐用例点击结果 + 截图 + `PASS/FAIL` | **必须与用例作者不是同一个 worker** |
+| G6 合并 | `lead` | — | 合并提交 + 删分支 + 删 worktree + 账本 | 三份证据齐全；执行人不能是作者 |
+
+**两条指挥线**：`lead` 只对四个线头（`pm` / `englead` / `qa` / `audit`）派工，**不直接指挥 worker**。
+
+**并发**：worker 是 `subagent`，**不是团队成员**，所以不受团队 8 人上限约束；
+并发数由子代理并行容量决定，超出的卡在任务板排队。
+
+**当前阻塞**：浏览器点击验证依赖 `playwright-host` MCP（端口 18081）。服务已启动，
+但当前 DSH 会话的 MCP 客户端仍 `disconnected` —— **需重启 DSH 才会注册工具**。
+恢复前 G5 只能降级为接口级验证 + 手动截图，报告里必须标 `G5-DEGRADED`。
+
+---
+
+## 8) 临时 worker（不是常驻成员）
+
+worker 不占常驻席位，由**线头**按需用 `subagent` 拉起，任务结束即结束。
+
+| worker | 谁拉起 | prompt 必须包含 | 产出 |
 |---|---|---|---|
-| G0 立项 | `pm` | 卡：`Scope / Acceptance / 分支名 / worktree 名` | `Scope` 重叠必须拆卡；`Acceptance` 不可判定不许开工 |
-| G1 隔离开发 | `dev worker`（Lead 派 teammate） | 独立分支 + 独立 worktree 的改动 + 自测输出 | 只改卡内 `Scope`；不 push、不 merge、不切回主干 |
-| G2 独立审查 | `reviewer`（Lead 派 `subagent`） | `VERDICT: PASS \| CHANGES` + 两轴问题清单 | **不能是作者本人**；`CHANGES` 必须逐条可执行 |
-| G3 提交 | `dev worker` | 分支上的提交 | 审查通过后才 commit |
-| G4 用例 | `qa`（用 `subagent` 起 worker） | 正向/反向/边界/全流程四类用例 + 测试代码 | 四类缺一不进 G5；断言点可程序化判定 |
-| G5 点击验证 | `qa worker` | 逐用例点击结果 + 截图 + `PASS/FAIL` | headless；任一 FAIL → 回 G1 全量重跑 |
-| G6 合并 | `lead` | 合并提交 + 删分支 + 删 worktree + 账本 | 三份证据齐全才合并；**不能是作者** |
+| `dev worker` | `englead` | `cwd`=worktree；只改卡内 Scope；自测命令与期望；不 push / 不 merge | 分支上的改动 + 自测命令与输出 |
+| `qa-case worker` | `qa` | 四类用例；断言点可判定；先验证用例在未修复分支上会失败 | 用例表 + 测试代码 |
+| `qa-click worker` | `qa` | 起服务并等就绪；headless 逐条点击；截图落盘；断言判定 | `PASS/FAIL` 清单 + 截图路径 |
 
-**能力事实**：`qa` 与 `reviewer` 都用 `subagent`（一次性，不占团队名额）；`dev worker` 用 `spawn_teammate`（占名额）。
-团队 `maxMembers=8`，五个固定角色后**并发 dev worker 上限 3**，超出的卡排队。
-
-**当前阻塞**：浏览器点击验证依赖 `playwright-host` MCP（端口 18081），**当前未启动**，工具集里没有对应工具。
-恢复前 G5 只能降级为接口级验证 + 手动截图，并必须在报告里标 `G5-DEGRADED`。
+硬规则：
+1. worker 的 prompt **必须自包含**——它不继承线头的会话上下文。
+2. `subagent` 支持 `provider` / `model`，线头按任务难度选模型。
+3. worker 之间不直接通信；所有协调经过线头。
+4. 每条 worker 的返回值必须是可核对的原始证据（命令+输出、文件路径、截图路径），不是结论性文字。

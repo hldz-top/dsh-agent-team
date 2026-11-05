@@ -9,17 +9,17 @@
 
 ```
 G0 立项 ──► G1 隔离开发 ──► G2 独立审查 ──► G3 提交 ──► G4 QA 生成用例 ──► G5 页面点击验证 ──► G6 合并收口
-   pm          dev worker        reviewer        dev worker      qa worker          qa worker         lead
+   pm          englead派worker   englead本人     dev worker      qa派case worker    qa派click worker   lead
 ```
 
 | 门 | 谁做 | 产物 | 不通过会怎样 |
 |---|---|---|---|
 | **G0 立项** | `pm` | 任务卡：`Scope / Acceptance / 分支名 / worktree 名` | 验收不可判定 → 不许开工 |
 | **G1 隔离开发** | `dev worker` | 独立分支 + 独立 worktree 里的改动 | 自测失败 → 自己修，不进 G2 |
-| **G2 独立审查** | `reviewer`（由 Lead 派 `subagent`，不是作者本人） | `PASS` 或 `CHANGES` + 问题清单 | `CHANGES` → 回 G1，附逐条问题 |
+| **G2 独立审查** | `englead`（开发线负责人本人，不写代码故天然非作者） | `PASS` 或 `CHANGES` + 问题清单 | `CHANGES` → 回 G1，附逐条问题 |
 | **G3 提交** | `dev worker` | 分支上的提交（审查通过后才 commit） | — |
-| **G4 QA 生成用例** | `qa worker`（`qa` 用 `subagent` 起） | 正向 / 反向 / 边界 / 全流程 四类用例 + 可执行测试 | 用例覆盖不足 → 打回补 |
-| **G5 页面点击验证** | `qa worker` | 逐用例点击结果 + 截图证据 + `PASS/FAIL` | 任一 FAIL → 回 G1 |
+| **G4 QA 生成用例** | `qa` 派 `qa-case worker`（`subagent`） | 正向 / 反向 / 边界 / 全流程 四类用例 + 可执行测试 | 用例覆盖不足 → 打回补 |
+| **G5 页面点击验证** | `qa` 派 `qa-click worker`（与 G4 不是同一个 worker） | 逐用例点击结果 + 截图证据 + `PASS/FAIL` | 任一 FAIL → 回 G1 |
 | **G6 合并收口** | `lead` | 合并到主分支 + 删开发分支 + 删 worktree + 账本更新 | 门禁未全绿 → 不合并 |
 
 **硬规则：G2 的审查者不能是 G1 的作者；G6 的执行者不能是 G1 的作者。** 谁开发谁不验收、谁不合并。
@@ -51,10 +51,11 @@ working_directory { cd: "../wt-<slug>" }
 
 **验证隔离生效**（worker 回执里必须贴）：`pwd` 是 worktree 路径、`git rev-parse --abbrev-ref HEAD` 是自己的分支。
 
-### 2.3 并发上限
+### 2.3 并发与指挥线
 
-团队 `maxMembers = 8`，五个固定角色占 5 个 → **最多 3 个并发 dev worker**。
-超过 3 个的卡在任务板排队，`blocked_by` 指向当前在跑的卡，不硬塞。
+- **两条指挥线**：`lead` 只对四个线头（`pm` / `englead` / `qa` / `audit`）派工，**不直接指挥 worker**。
+- worker 是 `subagent`，**不是团队成员**，因此不受团队 8 人上限约束；并发数由子代理并行容量决定。
+- 超出容量的卡在任务板排队，`blocked_by` 指向当前在跑的卡，不硬塞。
 
 ### 2.4 worker 边界
 
@@ -66,8 +67,8 @@ working_directory { cd: "../wt-<slug>" }
 
 ## 3. G2：独立审查
 
-审查者由 Lead 用 `subagent` 起（一次性，不占团队名额），prompt 里必须给：
-分支名、diff 范围、卡里的 `Acceptance`、以及本仓库的编码规范。
+审查由 **`englead` 本人**执行（开发线负责人）。因为 englead 不写代码，所以与被审对象天然无关。
+审查前必须拿到：分支名、diff 范围、卡里的 `Acceptance`、本仓库的编码规范。
 
 **两轴审查**（缺一不可）：
 
@@ -90,11 +91,13 @@ VERDICT: PASS | CHANGES
 
 ## 4. G4：QA 生成用例（由 qa 的 worker 做）
 
-`qa` 是固定角色，**不能 spawn 队友**，所以用 `subagent` 起一个 worker：
+`qa` 是验收线负责人，**不亲手写测试**。它用 `subagent` 起用例生成 worker：
 
 ```
-qa → subagent(prompt = 生成用例的完整任务, cwd = 该任务 worktree)
+qa → subagent(prompt = 生成四类用例的完整任务, cwd = 该任务 worktree)
 ```
+
+G5 的点击 worker 必须**另起一个**（`qa-click worker`），与用例作者不是同一个——自己写自己跑等于没有独立验证。
 
 ### 4.1 四类用例，一类都不能少
 
@@ -182,7 +185,7 @@ git push origin main            # 需要用户已授权推送
 | 能力 | 状态 | 说明 |
 |---|---|---|
 | 独立分支 + 独立 worktree | ✅ 可用 | `create_worktree` 工具在会话工具集里；兜底 `bash git worktree add` + `working_directory` |
-| 并发 worker | ⚠️ 上限 3 | 团队 `maxMembers=8`，五个固定角色后剩 3 个名额 |
+| 并发 worker | ✅ 不受团队席位限制 | worker 是 `subagent`，并发由子代理并行容量决定（可在设置页调） |
 | 独立审查（subagent） | ✅ 可用 | `subagent` 工具在工具集里 |
 | QA 生成测试用例 | ✅ 可用 | qa 用 `subagent` 起 worker；写测试代码是普通文件操作 |
 | **页面点击验证** | ❌ **当前不可用** | 浏览器 MCP（playwright-host）**未启动**：端口 18081 无监听，工具集里没有 `mcp__playwright-host__*` |
