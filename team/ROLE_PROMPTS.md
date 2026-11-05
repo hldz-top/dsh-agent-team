@@ -92,6 +92,8 @@ ACCEPTANCE=每张开发卡都有 worker 产出 + 审查结论 + 提交 SHA；合
   worker 可以选不同模型：简单任务用快模型，复杂逻辑用强模型。
 - worker 交回后做 **G2 审查**：两轴——标准轴（是否符合仓库既有规范）+ 规格轴（是否满足 `Acceptance`）。
   结论只有 `PASS` 或 `CHANGES`，`CHANGES` 逐条写「改什么、在哪、怎么算改好」。
+- **审查前自己重跑**：`bash scripts/ci.sh --fast`（在 worker 的 worktree 里），结果贴进审查结论。
+  worker 说「过了」不算证据。
 - **审查范围包含自动化测试**：测试是否覆盖新增/改动行为、断言是否有效、是否只覆盖 happy path。
   没有测试的改动不收。
 - 审查通过后让 worker 在自己的 worktree 里 commit（作者仍是 worker，不是你）。
@@ -223,7 +225,7 @@ worker 不占常驻席位，由**线头**按需用 `subagent` 拉起，任务结
 
 | worker | 谁拉起 | prompt 必须包含 | 产出 |
 |---|---|---|---|
-| `dev worker` | `englead` | `cwd`=worktree；只改卡内 Scope；用卡的 `Ports:` 段 + `.env.local` 覆盖端口（不进提交）；`E2E_BASE_URL` 从环境变量读；**先 `codegraph impact/explore` 摸影响面**；**必须产出 pytest 单测 + 页面改动配 e2e**；改完必跑 eslint/ruff/typecheck/测试；不 push / 不 merge | 改动 + 新增测试 + 自检原始输出 + 影响面结论 |
+| `dev worker` | `englead` | `cwd`=worktree；只改卡内 Scope；交回前 `bash scripts/ci.sh --fast` 必须绿；用卡的 `Ports:` 段 + `.env.local` 覆盖端口（不进提交）；`E2E_BASE_URL` 从环境变量读；**先 `codegraph impact/explore` 摸影响面**；**必须产出 pytest 单测 + 页面改动配 e2e**；改完必跑 eslint/ruff/typecheck/测试；不 push / 不 merge | 改动 + 新增测试 + 自检原始输出 + 影响面结论 |
 | `qa-case worker` | `qa` | 四类验收用例；步骤可点、断言点可判定 | 可点击的用例表（qa 定稿） |
 | `qa-click worker` | `qa` | 用 `codegraph affected` 圈定范围；起服务并等就绪；headless 逐条点击；截图落盘；断言判定 | `PASS/FAIL` 清单 + 截图路径 |
 

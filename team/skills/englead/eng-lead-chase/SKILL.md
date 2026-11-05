@@ -27,8 +27,8 @@ description: >-
 
 ### B. 亲自跑检查（只读，属于验收不属于施工）
 
-3. 进入 worker 的 worktree，跑卡上写的命令：lint / typecheck / 测试。
-   把**确切命令 + 原始输出**写回卡里。
+3. 进入 worker 的 worktree，**自己重跑** `bash scripts/ci.sh --fast`——不信 worker 的口头结论。
+   把**确切命令 + 原始输出（或失败行）**写回卡里。
 4. 用 `codegraph impact <symbol> -p <主仓>` 核对 worker 声称的影响面是否属实；
    影响面明显漏了 → 直接打回。
 

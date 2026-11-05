@@ -15,7 +15,7 @@ G0 立项 ──► G1 隔离开发 ──► G2 独立审查 ──► G3 提�
 | 门 | 谁做 | 产物 | 不通过会怎样 |
 |---|---|---|---|
 | **G0 立项** | `pm` | 任务卡：`Scope / Acceptance / 分支名 / worktree 名` | 验收不可判定 → 不许开工 |
-| **G1 隔离开发** | `dev worker`（`englead` 派） | 改动 + **自动化测试（pytest / e2e）** + 自检门全过（§2.5） | 自检红或缺测试 → 自己修，不进 G2 |
+| **G1 隔离开发** | `dev worker`（`englead` 派） | 改动 + **自动化测试（pytest / e2e）** + `ci.sh --fast` 绿（§2.5/§2.10） | 自检红或缺测试 → 自己修，不进 G2 |
 | **G2 独立审查** | `englead`（开发线负责人本人，不写代码故天然非作者） | `PASS` 或 `CHANGES` + 问题清单 | `CHANGES` → 回 G1，附逐条问题 |
 | **G3 提交** | `dev worker` | 分支上的提交，信息格式 `<type>(<scope>): 中文摘要` | 未过审查不许 commit |
 | **G4 验收用例表** | `qa`（可派 `qa-case worker` 起草，qa 定稿） | 正向 / 反向 / 边界 / 全流程 四类**可点击的用例表** | 缺类或断言不可判定 → 打回补 |
@@ -219,6 +219,30 @@ worker 改完代码**必须**跑仓库自己的检查，把命令与输出原样
 - 决策的**代价**要写进卡（工期、重做范围），不要只写结论。
 - 挂起不是超时：**没有自动恢复**。只有用户回答才能解开。
 
+### 2.10 本地 CI（唯一检查入口）
+
+仓库里必须有 `scripts/ci.sh`（从 `team/templates/ci.sh` 落地）。**所有角色都跑它，不再各写各的命令。**
+
+| 档位 | 跑什么 | 谁跑 | 预期时长 |
+|---|---|---|---|
+| `--fast` | lint + typecheck + **受影响测试**（`codegraph affected` 圈定） | G1 worker 自检、G2 englead 复跑 | 1–5 分钟 |
+| `--full` | `--fast` 全部 + **全量单测** + e2e | G6 合并前，Lead 在干净 checkout 上跑 | 10–30 分钟 |
+
+规则：
+
+1. **单一命令源**：`ci.sh` 里的命令必须与平台 CI（GitLab CI / GitHub Actions）一致，或直接调用同一批脚本——
+   否则必然出现"本地绿、平台红"。
+2. **谁跑都留证据**：报告落 `.ci/report-<ts>.json`（`.ci/` 加进 `.gitignore`），卡里引用路径 + 状态。
+3. **不信口头**：englead 审查时**自己重跑 `--fast`**；Lead 合并前**自己跑 `--full`**。worker 说"过了"不算。
+4. **失败即停**：一项红就结束，不继续跑后续项；失败日志路径写进卡。
+5. **e2e 端口**照卡上的 `Ports:` 段，`E2E_BASE_URL` 从环境变量读。
+6. **可复现**：依赖用锁文件装（`pnpm i --frozen-lockfile` / `uv sync --frozen`），
+   版本钉在 `.nvmrc` / `.python-version`。
+7. **起步不阻塞**：仓库还没有 `scripts/ci.sh` 时，第一张涉及开发的卡必须先把它落地——这是 G0 的前置条件。
+
+**为什么不用 git hooks 当门禁**：hooks 能被 `--no-verify` 绕过，worktree 之间共享 `.git/hooks` 也容易互相干扰。
+hooks 只做"早失败"辅助（pre-commit 跑 format / lint 单文件），**门禁一律以 `ci.sh` 为准**。
+
 ---
 
 ## 3. G2：独立审查
@@ -328,6 +352,7 @@ UI 回归**不排固定时间**。轻量门合并的前端改动照样登记到 
 ```bash
 # 1) 确认门禁证据都在（Lead 只读核对）
 #    审查报告: PASS | QA 用例表: 四类齐全 | 点击验证: 全 PASS 且有截图
+#    本地 CI:  bash scripts/ci.sh --full  必须 PASS（在干净 checkout 上自己跑，不信口头）
 
 # 2) 合并：固定 --no-ff，一个任务一个合并提交
 git switch main && git pull --ff-only

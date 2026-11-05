@@ -144,8 +144,8 @@ G0 立项(pm) → G1 隔离开发(englead 派 dev worker) → G2 独立审查(en
 
 - **分档**：标准门（产品代码 / 用户可见的改动）走完 G0–G6；轻量门（audit cleanup、非 UI 重构、文档配置）
   走 G0–G3 + 编译测试，跳过 G4/G5；**用户能在页面上看见的改动不许走轻量门**。
-- **自检**：worker 改完必须跑仓库自己的检查（`eslint` / `ruff` / `tsc` / 相关测试），红了不许交审查；
-  工具没配置只记建议，不阻塞。
+- **本地 CI**：仓库必须有 `scripts/ci.sh` 作为唯一检查入口。G1/G2 跑 `--fast`，G6 合并前 Lead 自己跑 `--full`；
+  报告落 `.ci/`，卡里引用路径。**hooks 只做早失败辅助，不当门禁**（可被 `--no-verify` 绕过）。
 - **单仓**：一个团队固定管一个仓库；worktree 落 `<仓库根>/../wt-<slug>`，codegraph 索引一份。换项目 = 换团队。
 - **并发隔离**：englead 拆卡时分配端口段写进 `Ports:`，worker 用 `.env.local` 覆盖（不进提交），
   e2e 的 `baseURL` 从环境变量读。
