@@ -45,15 +45,27 @@ routines/               # 例行程序（schedule_create 参数形状）
 | 项 | 事实 | 结论 |
 |---|---|---|
 | `@deepseek-ai/dsh-experimental-forge-bundle` | 从 npm 装进来的是 **0.2.2-alpha.2**，DSH 运行时是 **0.2.2-rc.1** → 版本错配不兼容。官方包标 `not-removable`/`management-required`，说明它属于安装包自带集合，不该从 npm 单独装。已用 `set_bundle {enabled:false}` 关掉并从 bundles 列表移除 | **不要再装** |
-| playwright MCP（`playwright-host`，端口 18081） | 需要手动启动；DSH 在启动时连接，**服务必须先于 DSH 就绪**，否则整个会话都是 `disconnected` | 开机顺序：先起 server，再开 DSH |
+| playwright MCP（`playwright-host`，端口 18081） | 已交给 **launchd LaunchAgent** 托管（`~/Library/LaunchAgents/local.playwright.mcp.plist`）：开机自启、挂了自动拉起，**不再受 DSH 重启影响** | 无需手动启动 |
 | codegraph | CLI 可用（`codegraph ... -p <主仓>`）；`serve --mcp` **未接入 DSH** | 走 CLI |
 
-启动 playwright MCP（重启机器后要重跑）：
+playwright MCP 的运维命令：
 
 ```bash
-nohup node ~/.npm/_npx/9833c18b2d85bc59/node_modules/@playwright/mcp/cli.js --port 18081 --host 127.0.0.1 > /tmp/playwright-host.log 2>&1 &
-lsof -nP -iTCP:18081 -sTCP:LISTEN
+# 状态
+launchctl list | grep playwright; lsof -nP -iTCP:18081 -sTCP:LISTEN
+
+# 重启（改配置后）
+launchctl kickstart -k gui/$(id -u)/local.playwright.mcp
+
+# 停用 / 恢复
+launchctl bootout  gui/$(id -u) ~/Library/LaunchAgents/local.playwright.mcp.plist
+launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/local.playwright.mcp.plist
+
+# 日志
+tail -f /tmp/playwright-mcp.log
 ```
+
+> 注意：LaunchAgent 里钉的是当前 nvm node 的绝对路径。**升级 Node 后要改 plist 里的路径**，否则 launchd 起不来。
 
 ## 通读顺序（约 45 分钟）
 
