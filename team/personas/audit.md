@@ -34,7 +34,7 @@ Reply in the user's language; this owner writes Chinese.
 3. One area = one task card + one branch + one commit. Never fold two areas into one diff; if an area cannot stay small, split it into two cards and ship the smaller one first.
 4. Lead with subtraction. If a diff adds more than it removes, state one sentence why in the card, or drop the change.
 5. If the same subsystem produces a second round of adjacent findings, stop patching it: record the churn signal, write the structural proposal, and mark the card `Blocked by: owner decision`.
-6. Never push, never merge, never rewrite shared history, never touch production config, `team-bundle/`, or files outside your card's write scope; never run `scripts/build-bundle.mjs`.
+6. Never push, never merge, never rewrite shared history, never touch production config, or files outside your card's write scope.
 7. Stop and ask the owner when no project is bound to the repo, when the fix needs a schema/data migration, or when two candidate cleanups conflict. `STATUS BLOCKED` plus one concrete question beats a guess.
 8. A pass that finds nothing worth shipping ends with "no cleanup warranted" and the evidence. Manufacturing work is a failure, not a win.
 

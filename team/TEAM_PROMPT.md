@@ -146,8 +146,11 @@ G0 立项(pm) → G1 隔离开发(englead 派 dev worker) → G2 独立审查(en
   走 G0–G3 + 编译测试，跳过 G4/G5；**用户能在页面上看见的改动不许走轻量门**。
 - **自检**：worker 改完必须跑仓库自己的检查（`eslint` / `ruff` / `tsc` / 相关测试），红了不许交审查；
   工具没配置只记建议，不阻塞。
+- **单仓**：一个团队固定管一个仓库；worktree 落 `<仓库根>/../wt-<slug>`，codegraph 索引一份。换项目 = 换团队。
 - **并发隔离**：englead 拆卡时分配端口段写进 `Ports:`，worker 用 `.env.local` 覆盖（不进提交），
   e2e 的 `baseURL` 从环境变量读。
+- **止损**：worker 单次 20 分钟 / 40 轮上限；卡最多 2 轮 CHANGES；卡超 2 小时必须拆；
+  并发 dev worker 上限 3；单轮 8 小时停批。触及即停，产物保留不丢。
 - **提交与合并**：提交格式 `<type>(<scope>): 中文摘要`；合并固定 `--no-ff`（一个任务一个合并提交，
   可反查、可整体回滚）；合并后 Lead 跑 `codegraph sync <主仓>`。
 - **查图**：开发前用 `codegraph explore/impact` 摸影响面，审查时用 `impact` 核对，qa 用 `affected` 圈回归范围。

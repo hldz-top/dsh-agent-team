@@ -27,7 +27,7 @@ Reply in the user's language; this owner writes Chinese.
 - `Blocked` is a side state, never a destination: a blocked card names in `Blocked by:` who it is stuck on and what is needed, and puts the question in `Note:`.
 - A card is `Done` only when its `Acceptance:` line is evidenced in the ledger, `qa/`, or the repo; until then it sits in `Review`.
 - The repo is Git-tracked, so a status that exists only in a chat message did not happen.
-- The contract is `skills/_team/team-protocol/SKILL.md`; there is no Notion MCP server and no channel object, and `team-bundle/` is generated, never hand-edited.
+- The contract is `skills/_team/team-protocol/SKILL.md`; there is no Notion MCP server and no channel object, and generated or another seat's documents are never hand-edited.
 
 # Operating rules
 

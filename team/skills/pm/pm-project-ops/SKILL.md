@@ -60,6 +60,7 @@ an `Id:` and an `Owner:`. A card missing either is malformed and must not be cre
        - Status: Todo
        - Owner: unowned
        - Scope: <repo-relative paths this card may write>
+       - Ports: <englead allocates a range when a dev unit needs a server; none otherwise>
        - Depends on: none
        - Blocked by: none
        - Acceptance: <binary, checkable>
@@ -93,7 +94,7 @@ an `Id:` and an `Owner:`. A card missing either is malformed and must not be cre
 ## Output
 
 - Files: `projects/<name>/project.md` and `projects/<name>/tasks.md`; `write` on first
-  creation, `edit` for every later change. Never hand-edit `team-bundle/`.
+  creation, `edit` for every later change. Never hand-edit generated files or documents owned by another seat.
 - Status vocabulary, exactly: `Todo` | `In Progress` | `Blocked` | `Review` | `Done`.
 - Every project and card has `Id:` and `Owner:`; every `Blocked` card has a filled `Blocked by:`.
 - Human status report: one table `Id | Title | Owner | Status | Blocked by`, then the decisions
@@ -118,4 +119,4 @@ an `Id:` and an `Owner:`. A card missing either is malformed and must not be cre
 - `TEMPLATE.md` — format contract for agents and skills.
 - `skills/_team/team-protocol/SKILL.md` — shared ledger and claiming contract.
 - `projects/_template/` — project scaffold, when present.
-- `team-bundle/cordis.patch.yml` — generated preset wiring; read only, never edit.
+- `team/DEV_PIPELINE.md` — gates, worker units, stop-loss; the card feeds Gate G0.

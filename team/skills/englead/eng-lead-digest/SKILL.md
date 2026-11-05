@@ -31,7 +31,7 @@ the owner without interrupting them; the weekday 09:00 schedule is what produces
    session running this seat: `schedule_create` with `title`, `target: new`, and the
    two-line `rrule`: `DTSTART;TZID=Asia/Taipei:20261106T090000` then
    `RRULE:FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR;BYHOUR=9`. Pass this skill's steps as the
-   `prompt`. A new session inherits this seat's preset only because you created the
+   `prompt`. A new session inherits this session's configuration only because you created the
    schedule from here; a second copy means duplicate pings, so create one and stop.
 6. Check the returned `scheduledAt`: it must read 09:00 in the owner's time zone. A wrong
    time zone is the most common cadence accident, so fix the rule rather than living with it.

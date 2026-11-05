@@ -40,6 +40,19 @@ projects/               # 项目账本：_template/ 含 project/STATUS/tasks/DEC
 routines/               # 例行程序（schedule_create 参数形状）
 ```
 
+## 通读顺序（约 45 分钟）
+
+| # | 文档 | 读它回答什么 | 时间 |
+|---|---|---|---|
+| 1 | `README.md` | 这是什么、怎么用、边界在哪 | 5 min |
+| 2 | `team/TEAM_PROMPT.md` | 团队怎么建、怎么协作、红线是什么、怎么用工具 | 10 min |
+| 3 | `team/ROLE_PROMPTS.md` | 四个角色各自的职责/边界/验收 + 临时 worker 定义 | 10 min |
+| 4 | `team/DEV_PIPELINE.md` | 开发六道门、隔离与端口、自检、codeGraph、止损、合并 | 15 min |
+| 5 | `team/DOC_PROTOCOL.md` | 事实写哪个文件、四态分离、裁决留痕、防膨胀 | 8 min |
+| 6 | `projects/_template/` | 账本五件套 + UI 待验证队列的标准形状 | 3 min |
+| 7 | `team/skills/**` | 各角色的可执行流程（按需查，不必通读） | 按需 |
+| 8 | `team/PLUGIN_DESIGN.md` | `dsh-team-bot` 自动建团设计（**待审核，未实施**） | 5 min |
+
 ## 三条硬约束
 
 1. **只有 Lead 能 spawn 和 interrupt。** 队友可以互相 `send_message`，但需要更多人手只能把方案交回 Lead。

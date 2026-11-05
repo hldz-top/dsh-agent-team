@@ -73,4 +73,4 @@ description: >-
 ## References
 
 - `team/DOC_PROTOCOL.md` — 完整机制（SSOT 表 / 四态 / 防膨胀规则 / 命名约定）
-- `projects/_template/` — 五个文件的标准形状
+- `projects/_template/` — 项目账本与 UI 待验证队列的标准形状

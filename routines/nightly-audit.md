@@ -1,7 +1,7 @@
 # 例行程序：夜间代码质量审计（04:00）
 
 DSH 没有 Grok Bot 的"自动化任务"面板；等价物是 Host 级 `schedule` 服务 + `schedule_create`
-工具。定时任务会**继承创建它的那个会话的 preset 与工作目录**，所以必须在 `audit` 席位的
+工具。定时任务会**继承创建它的那个会话的配置与工作目录**，所以必须在 `audit` 席位的
 会话里创建，才会以 Nightly Audit Engineer 的身份醒来。
 
 ## 1. 在哪创建

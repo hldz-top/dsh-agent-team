@@ -42,15 +42,14 @@ A card with an empty `Blocked by:` is a defect. `Done` requires evidence in the 
 
 Never claim a card another seat owns. Never edit a card at a stale revision — re-read and rebase.
 
-## Using the team surface
+## Using the team surface（两条指挥线）
 
-- `spawn_teammate` — Lead only. Names a teammate, gives it one self-contained task. Teammates
-  inherit the Lead's preset, so give them the seat context they need in the prompt.
-- `send_message` — steer a running teammate, or wake an inactive one. Keep messages short and
-  actionable; a message that only says "status?" is noise.
-- `list_agents` — availability only. `inactive` does not mean done.
-- `wait_agent` — block for the next real change instead of polling.
-- `interrupt_agent` — Lead only, when work has gone sideways.
+- `lead` 只对四个线头派工（`pm` / `englead` / `qa` / `audit`），**不直接指挥 worker**。
+- 线头用 `subagent` 起 worker：一次性、上下文独立、可指定 `cwd` 与模型，任务结束即结束。
+- worker **不是团队成员**：不占团队席位、不上任务板、不能 `spawn_teammate`；协调只经线头。
+- `send_message` 用于团队成员之间（含跨线协调）；`wait_agent` 只对团队成员有效，对 worker 无效。
+- 只有 `lead` 能 `spawn_teammate` / `interrupt_agent`。
+- worker 在各自 worktree 里干活；团队文件、账本、任务板由线头写。
 
 Only one member should write a given file. If two cards need the same file, merge the cards
 or split by file.
