@@ -73,6 +73,9 @@ plugin_manager {
 装完在 **新建会话 → 角色选择** 里会多出这 5 个 bot（和 standard/ptc/minimal/cordis 并列）。
 安装需要 Full access 或审批：bundle 声明会以 YAML 形式在 Host 进程里执行插件。
 
+> **当前状态：已安装并启用**（`@local/dsh-grok-team@1.0.0`，见第 9 节验证记录）。
+> 已有会话保留启动时的插件版本；要看到新的 5 个角色，请刷新页面后**新建会话**。
+
 **改了人格/技能之后**：重新 `build-bundle` → 重新 `install_bundle` → **新建会话**验证。
 已有会话保留它启动时的插件版本，旧会话看不到改动。
 
@@ -116,3 +119,24 @@ plugin_manager {
   `scripts/build-bundle.mjs` 的 `ROLE` 表里加一行（决定 plan/goal 能力）。
 - 生成文件里 `customSkillDirs` 是**绝对路径**。搬动本目录后必须重新 build + 重新 install。
 - 想稳定到 `~/.dsh/team/`：整目录搬过去再重建重建即可，逻辑不变。
+
+## 9. 安装验证记录
+
+| 检查项 | 结果 |
+|---|---|
+| `validate-bundle.mjs` | OK — 5 preset / 94 plugin row / 784 行 |
+| bundle 安装 | `@local/dsh-grok-team@1.0.0` → profile bundles 列表末位 |
+| Loader 挂载 | `preset-pm` / `preset-audit` / `preset-englead` / `preset-qa` / `preset-tinkabot` 全部 `enabled: true, fiberPhase: active` |
+| Config schema | 9 条 `@deepseek-ai/dsh-agent-preset` 条目（原 4 + 新 5）均可查询 |
+| 技能目录 | 11 个 `SKILL.md`（10 席位技能 + 1 共享协议），`customSkillDirs` 绝对路径全部存在 |
+
+**尚未验证（需要你操作一次）**：新会话里实际选中某个 bot 后，persona 是否按预期生效、
+该席位的技能目录是否只出现在它的目录下。前者看开场自称，后者看 `skill` 工具列出什么。
+
+**回滚**：`plugin_manager { action: "set_bundle", target: "@local/dsh-grok-team", enabled: false }`
+（或 `remove_bundle`）。停用不影响仓库里任何文件。
+
+## 10. 版本控制
+
+本仓库已 `git init`（`main` 分支，首个提交 `c8a099c`）。账本之所以可信，是因为它可 diff、
+可 blame、可回滚——"只存在于聊天里的状态等于没发生"这条规则依赖于此。
