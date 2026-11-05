@@ -40,6 +40,21 @@ projects/               # 项目账本：_template/ 含 project/STATUS/tasks/DEC
 routines/               # 例行程序（schedule_create 参数形状）
 ```
 
+## 环境事实（踩过的坑，别再踩）
+
+| 项 | 事实 | 结论 |
+|---|---|---|
+| `@deepseek-ai/dsh-experimental-forge-bundle` | 从 npm 装进来的是 **0.2.2-alpha.2**，DSH 运行时是 **0.2.2-rc.1** → 版本错配不兼容。官方包标 `not-removable`/`management-required`，说明它属于安装包自带集合，不该从 npm 单独装。已用 `set_bundle {enabled:false}` 关掉并从 bundles 列表移除 | **不要再装** |
+| playwright MCP（`playwright-host`，端口 18081） | 需要手动启动；DSH 在启动时连接，**服务必须先于 DSH 就绪**，否则整个会话都是 `disconnected` | 开机顺序：先起 server，再开 DSH |
+| codegraph | CLI 可用（`codegraph ... -p <主仓>`）；`serve --mcp` **未接入 DSH** | 走 CLI |
+
+启动 playwright MCP（重启机器后要重跑）：
+
+```bash
+nohup node ~/.npm/_npx/9833c18b2d85bc59/node_modules/@playwright/mcp/cli.js --port 18081 --host 127.0.0.1 > /tmp/playwright-host.log 2>&1 &
+lsof -nP -iTCP:18081 -sTCP:LISTEN
+```
+
 ## 通读顺序（约 45 分钟）
 
 | # | 文档 | 读它回答什么 | 时间 |
