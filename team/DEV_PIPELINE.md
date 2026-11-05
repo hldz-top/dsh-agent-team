@@ -393,19 +393,19 @@ git push origin main            # 需要用户已授权推送
 | 独立审查（subagent） | ✅ 可用 | `subagent` 工具在工具集里 |
 | 代码图谱（codegraph） | ✅ 可用 | CLI `codegraph 1.4.1` 已安装；`serve --mcp` 可接 DSH；多项目在用 |
 | QA 生成测试用例 | ✅ 可用 | qa 用 `subagent` 起 worker；写测试代码是普通文件操作 |
-| **页面点击验证** | ❌ **当前不可用** | 浏览器 MCP（playwright-host）**未启动**：端口 18081 无监听，工具集里没有 `mcp__playwright-host__*` |
+| **页面点击验证** | ✅ **已实测可用** | `mcp__playwright-host__*` 全套可用（launchd 托管、headless）；正/反/边界/全流程 4 类 + 负向对照已跑通，证据见 `team/notes/qa/g5-smoke/` |
 | 合并 + 删分支 | ✅ 可用 | `bash git`；需用户授权推送 |
 
-**页面点击验证的恢复办法**（启动一次即可，重启机器后需重跑）：
+**浏览器通道的运维**：playwright MCP 由 launchd LaunchAgent 托管（`~/Library/LaunchAgents/local.playwright.mcp.plist`），
+开机自启、崩溃自动拉起，不再受 DSH 重启影响。检查与重启：
 
 ```bash
-nohup npx -y @playwright/mcp@latest --port 18081 --host 127.0.0.1 > /tmp/playwright-host.log 2>&1 &
-# 等 5–10 秒后确认监听
-lsof -nP -iTCP:18081 -sTCP:LISTEN
+launchctl list | grep playwright
+launchctl kickstart -k gui/$(id -u)/local.playwright.mcp
 ```
 
-启动后 DSH 的 MCP 客户端需要重连才会注册工具（重开会话或重启 Host）。
-**在它恢复之前，G5 只能降级为「接口级验证 + 手工截图」，且必须在报告里标 `G5-DEGRADED`。**
+通道不可用时（服务挂了、端口被占），G5 降级为「接口级验证 + 手工截图」，
+**必须在报告里标 `G5-DEGRADED`**，不许当成 PASS。
 
 ---
 
