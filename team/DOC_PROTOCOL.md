@@ -39,7 +39,7 @@
 | `project.md` | 目标、成功标准、Areas、不可变约定 | `pm` | 立项 / 范围变化 |
 | `STATUS.md` | **现状**：基线数字、最后验证时间、已知偏差、已关闭事项 | `pm` | 每轮结束；状态变化时 |
 | `tasks.md` | **待办**：任务卡（`Todo/In Progress/Blocked/Review/Done`） | `pm` | 每次状态变化 |
-| `DECISIONS.md` | **裁决**：日期 + 内容 + 取代关系 | `pm` | 每次裁决 |
+| `DECISIONS.md` | **裁决**：日期 + 内容 + 来源 + 取代关系（人工决策窗口的裁决也落这里） | `pm` | 每次裁决 |
 | `ITERATIONS.md` | 迭代索引：R1..Rn 一行一轮 | `pm` | 每轮结束 |
 | `iterations/R<n>-YYYY-MM-DD.md` | **单轮记录**：目标/派工/产出/证据/遗留 | Lead | 每轮结束 |
 | `notes/<role>/` | **过程证据**：受控归档（见 §4） | 各角色自己的子目录 | 按需 |
