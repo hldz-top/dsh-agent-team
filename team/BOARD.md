@@ -7,7 +7,7 @@
 
 | 轮次 | 日期 | 团队 | 状态 |
 |---|---|---|---|
-| R1 | 2026-11-05 | lead + pm / englead / audit / qa | **待执行**（文档已完成，团队尚未实际建起） |
+| R1 | 2026-11-05 | lead + pm / englead / audit / qa | **已收口（R1 完成）** — 合并 `75a3e74`（`--no-ff`），`ci.sh --full` PASS，QA `STATUS PASS` |
 
 ## R1 建团（报到轮）
 
