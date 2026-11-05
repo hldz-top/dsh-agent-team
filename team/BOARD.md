@@ -7,7 +7,7 @@
 
 | 轮次 | 日期 | 团队 | 状态 |
 |---|---|---|---|
-| R1 | 2026-11-05 | lead + pm / englead / audit / qa / tinkabot | 进行中（建团报到） |
+| R1 | 2026-11-05 | lead + pm / englead / audit / qa | 进行中（建团报到） |
 
 ## R1 建团（报到轮）
 

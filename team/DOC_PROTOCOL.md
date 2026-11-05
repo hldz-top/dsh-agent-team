@@ -43,7 +43,7 @@
 | `ITERATIONS.md` | 迭代索引：R1..Rn 一行一轮 | `pm` | 每轮结束 |
 | `iterations/R<n>-YYYY-MM-DD.md` | **单轮记录**：目标/派工/产出/证据/遗留 | Lead | 每轮结束 |
 | `notes/<role>/` | **过程证据**：受控归档（见 §4） | 各角色自己的子目录 | 按需 |
-| `qa/` | 验收资产：`AC-PACK.md`、`run-YYYY-MM-DD-*.md` | `qa` | 每次运行 |
+| `qa/` | 验收资产：`AC-PACK.md`、`run-YYYY-MM-DD-*.md`、`UI-PENDING.md`（轻量门待验证队列） | `qa` | 每次运行 / 每次合并 |
 
 ### 2.3 归属速查（谁写哪个）
 
@@ -54,7 +54,6 @@
 | `englead` | `notes/englead/`、代码与本地配置（按卡） |
 | `audit` | `notes/audit/`、审计分支与提交 |
 | `qa` | `projects/<p>/qa/**` |
-| `tinkabot` | `notes/tinkabot/`、`plugins/**` |
 
 **只有 `pm` 能改项目区那五个文件。** 别人要改 → `send_message` 给 pm 说明改什么；pm 改，不在别处另写一份。
 

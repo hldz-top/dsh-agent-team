@@ -1,11 +1,11 @@
 # 团队初始化模板与团队规范
 
-> 版本：2026-11-05 v1（Lead 编写）｜适用：**任意新会话重建同一个五人团队**
-> 配套事实源：[ROLE_PROMPTS.md](./ROLE_PROMPTS.md)（五角色全文）、[BOARD.md](./BOARD.md)（任务板）、[DOC_PROTOCOL.md](./DOC_PROTOCOL.md)（文档管理机制）、`team/personas/`（人格与常驻记忆）、`team/skills/`（角色技能）
+> 版本：2026-11-05 v1（Lead 编写）｜适用：**任意新会话重建同一个四人团队**
+> 配套事实源：[ROLE_PROMPTS.md](./ROLE_PROMPTS.md)（四角色全文）、[BOARD.md](./BOARD.md)（任务板）、[DOC_PROTOCOL.md](./DOC_PROTOCOL.md)（文档管理机制）、`team/personas/`（人格与常驻记忆）、`team/skills/`（角色技能）
 > 使用方式：新会话 Lead **直接按 §1 初始化团队**，把 §2 模板按 §3 角色变量填好，逐个 `spawn_teammate` 下发。
 
 **为什么是这种模式**：这个团队不是 5 个独立入口（Agent Preset），而是**一个会话里由一个 Lead
-拉起 5 个固定角色队友**。队友是持久的：一次 spawn 之后整轮会话都在，靠 `send_message` 唤醒、
+拉起 4 个固定角色队友**。队友是持久的：一次 spawn 之后整轮会话都在，靠 `send_message` 唤醒、
 靠共享任务板交接。换会话就要按本文件重建——角色定义在文件里，不在会话历史里。
 
 ---
@@ -16,7 +16,7 @@
 2. **建任务板**：每个角色 1 个 Phase 任务，描述里写清 目标 / 验收标准 / `write_scopes` / 依赖（`blocked_by`）。
    → `team_task_create`，一次建 5 条。**不建任务就不 spawn**：没有任务的成员只能空转。
 3. **逐角色 spawn**，顺序固定：
-   `pm` → `englead` → `audit` → `qa` → `tinkabot`
+   `pm` → `englead` → `qa` → `audit`
    （有依赖关系时用 `blocked_by` 表达，不要靠 spawn 顺序表达）。
 4. **每个成员 spawn 时**，把 §2 模板填好 + `ROLE_PROMPTS.md` 对应角色段落拼接，作为 `spawn_teammate` 的 `prompt`。
    prompt 必须**自包含**：不依赖 Lead 的会话历史，也不要求队友去猜。
@@ -58,7 +58,7 @@
 
 ---
 
-## 3. 五角色变量表（填进 §2 模板）
+## 3. 四角色变量表（填进 §2 模板）
 
 | 角色名 | ROLE_DESC | WRITE_SCOPE | 验收 | 技能 |
 |---|---|---|---|---|
@@ -66,7 +66,6 @@
 | `englead` | **开发线负责人**：拆解、派 dev worker、审查、汇总（不亲自写代码） | `projects/<name>/notes/englead/` | 每卡五要素：分支 / worktree / worker 产出 / 审查结论 / 提交 SHA | `eng-lead-decompose`、`eng-lead-chase`、`eng-lead-digest` |
 | `audit` | 夜间全树审计工程师 | 审计分支与提交、`projects/<name>/notes/audit-*.md` | 每 area 至多一次 cleanup；无发现要给证据 | `audit-codebase-research`、`audit-one-cleanup-per-area` |
 | `qa` | **验收线负责人**：写 AC 包、派 qa worker、出判定（不亲手写测试/点页面） | `projects/<name>/qa/**` | 四类用例齐全 + 点击验证全绿 + `PASS\|FAIL\|BLOCKED` | `qa-ac-fail-gate`、`qa-adhd-response` |
-| `tinkabot` | 插件封装工程师（API → bundle） | `plugins/**`、`team/skills/tinkabot/**` | 本地证明（装进 profile + 新会话可见）后才谈发布 | `tinkabot-wrap-api-as-plugin`、`tinkabot-publish-plugin` |
 
 > 完整角色文本见 [ROLE_PROMPTS.md](./ROLE_PROMPTS.md)。人格与常驻记忆见 `team/personas/<id>.md`。
 
@@ -143,6 +142,10 @@ G0 立项(pm) → G1 隔离开发(englead 派 dev worker) → G2 独立审查(en
 → G4 生成用例(qa 派 qa-case worker) → G5 点击验证(qa 派 qa-click worker) → G6 合并收口(lead)
 ```
 
+- **分档**：标准门（产品代码 / 用户可见的改动）走完 G0–G6；轻量门（audit cleanup、非 UI 重构、文档配置）
+  走 G0–G3 + 编译测试，跳过 G4/G5；**用户能在页面上看见的改动不许走轻量门**。
+- **补验证**：轻量门合并的前端改动进 `qa/UI-PENDING.md`，由 qa 在工作日 18:00（增量）与周五 16:00（全量）
+  批量跑页面点击；积压 >20 行或超 7 天未验证 → 暂停轻量门。
 - **隔离**：一个任务 = 一个分支 `<type>/<slug>-<yyyymmdd>` + 一个 worktree，禁止共享。
 - **两条指挥线**：`englead` 管开发线、`qa` 管验收线；Lead 只对线头派工，不直接指挥 worker。
 - **worker**：线头用 `subagent` 拉起，不占常驻席位；并发受子代理并行容量约束，超出排队。
@@ -164,7 +167,6 @@ G0 立项(pm) → G1 隔离开发(englead 派 dev worker) → G2 独立审查(en
 | `englead` | `englead/eng-lead-decompose`、`englead/eng-lead-chase`、`englead/eng-lead-digest` |
 | `audit` | `audit/audit-codebase-research`、`audit/audit-one-cleanup-per-area` |
 | `qa` | `qa/qa-ac-fail-gate`、`qa/qa-adhd-response` |
-| `tinkabot` | `tinkabot/tinkabot-wrap-api-as-plugin`、`tinkabot/tinkabot-publish-plugin` |
 
 > 想让队友用 `skill` 工具自动发现这些技能：把 `team/skills` 软链到项目根的 `.agents/skills`
 > 或 `~/.dsh/skills`。否则在 prompt 里给出绝对路径，让队友用 `read` 读。
@@ -191,7 +193,7 @@ G0 立项(pm) → G1 隔离开发(englead 派 dev worker) → G2 独立审查(en
 
 1. 新开会话，把本文件路径发给 Lead：
    `<TEAM_DIR>/team/TEAM_PROMPT.md`
-2. 说一句：**"按 TEAM_PROMPT.md 初始化五人团队，然后汇报报到结果"**
+2. 说一句：**"按 TEAM_PROMPT.md 初始化四人团队，然后汇报报到结果"**
 3. Lead 会：建 5 条任务 → 按 §3 逐个 spawn → 等回执 → 把报到结论写进 `BOARD.md`。
 4. 之后的活都按同一句派：**"把 <目标> 建成任务派给对应角色"**。
 5. 旧会话的团队会一直占着名额；换会话就重建，不要想着"继承上一个会话的队友"。

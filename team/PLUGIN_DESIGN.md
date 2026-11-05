@@ -1,7 +1,7 @@
 # `dsh-team-bot` 设计（待审核）
 
 > 状态：**设计稿，未实施**。审核通过后再建包、再安装。
-> 目标：一个名为 `dsh-team-bot` 的 Agent Preset，选中它开一个会话，**自动**出现 5 个固定角色队友
+> 目标：一个名为 `dsh-team-bot` 的 Agent Preset，选中它开一个会话，**自动**出现 4 个固定角色队友
 > 和 5 条对应的任务板任务；同时具备可开发、可验证、可回滚的运行环境。
 
 ---
@@ -69,7 +69,7 @@ team/dsh-team-bot/
       config:
         id: dsh-team-bot
         name: DSH Team Bot
-        description: 一个会话 + 五个固定角色队友（pm/englead/audit/qa/tinkabot），首轮自动建团。
+        description: 一个会话 + 四个固定角色队友（pm/englead/audit/qa），首轮自动建团。
         order: 0
         plugins:
           - id: persona
@@ -118,8 +118,8 @@ on 'agent/created'(agent):
 ```
 bootstrap(agent):
   1. 读 team/BOARD.md 的当前轮号 R<n>（读不到就 R1）
-  2. createTask × 5，subject 前缀带 [R<n>]，write_scopes 取自 ROLE_PROMPTS §3
-  3. spawnTeammate × 5，顺序 pm → englead → audit → qa → tinkabot
+  2. createTask × 4，subject 前缀带 [R<n>]，write_scopes 取自 ROLE_PROMPTS §3
+  3. spawnTeammate × 4，顺序 pm → englead → audit → qa
      - prompt = TEAM_PROMPT §2 模板 + ROLE_PROMPTS 对应段落 + 文档纪律 4 条
      - context = 'fresh'，provider = 'spawn'
   4. 任一步失败 → 记录 diagnostics，不中断后续；失败的成员留给 Lead 用工具兜底重建

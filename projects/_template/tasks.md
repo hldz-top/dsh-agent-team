@@ -11,7 +11,7 @@
 ## T-001 <祈使句标题>
 - Id: T-001
 - Status: Todo
-- Owner: unowned | pm | audit | englead | qa | tinkabot
+- Owner: unowned | pm | englead | audit | qa
 - Scope: <本卡可写的仓库相对路径>
 - Depends on: none
 - Blocked by: none

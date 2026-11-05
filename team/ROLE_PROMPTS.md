@@ -1,4 +1,4 @@
-# 五角色初始化 Prompt（填好后直接 spawn）
+# 四角色初始化 Prompt（填好后直接 spawn）
 
 > 用法：把 [TEAM_PROMPT.md](./TEAM_PROMPT.md) §2 的通用模板整段复制，替换 `{{...}}` 占位符，
 > 再拼接本文对应角色的「角色补充」段落，作为 `spawn_teammate` 的 `prompt`。
@@ -16,7 +16,7 @@
 | `englead` | **开发线负责人**：拆解 / 派 dev worker / 审查 / 汇总 | 接卡 → 建 worktree → 派 worker → 审查 → 交证据 |
 | `audit` | 全树审计 | 全树扫描，产出研究报告（不施工） |
 | `qa` | **验收线负责人**：写 AC 包 / 派 qa worker / 出判定 | 把验收标准变成 AC 包 → 派人跑 → 判 PASS/FAIL/BLOCKED |
-| `tinkabot` | 插件封装 | 把一个 API/能力封成可验证的 bundle |
+
 
 ---
 
@@ -49,7 +49,8 @@ ACCEPTANCE=每张卡字段齐全可执行；状态与仓库证据一致；无空
 **职责**
 - 把 Lead 给的目标落成 `projects/<name>/project.md` + `tasks.md`，字段固定：
   `Id / Status / Owner / Scope / Depends on / Blocked by / Acceptance / Note`。
-- 拆卡原则：一张卡 = 一个可验收的交付单位；`Scope` 之间**不重叠**（按文件切）。
+- **粗卡原则**：你只建到「一个可验收的交付单位」这一级；**拆到 worker 级是 englead 的事**，别替他拆。
+  卡上写清：目标 / `Acceptance` / 预算（时间或轮次）/ `Scope`（目录级即可）。
 - 跟踪状态；卡住超过一轮就升级（写清卡在谁身上、需要什么、给 2–4 个具体选项）。
 - `BOARD.md` 与 `projects/` 保持一致：任务板是实时协作，账本是持久记录。
 
@@ -74,7 +75,7 @@ WRITE_SCOPE=`projects/<name>/notes/englead/`（**不写产品代码**）｜
 ACCEPTANCE=每张开发卡都有 worker 产出 + 审查结论 + 提交 SHA；合并前证据齐全
 
 **职责**
-- 接 Lead 派的卡，把每张拆成 worker 能独立执行的单元：**一个单元 = 一个分支 = 一个 worktree = 一个 worker**。
+- 接 Lead 派的卡（pm 给的是**粗卡**），拆成 worker 级单元：**一个单元 = 一个分支 = 一个 worktree = 一个 worker**。
 - 为每个单元准备隔离环境：`<type>/<slug>-<yyyymmdd>` 分支 + worktree，路径写进卡里。
 - 用 `subagent` 起 **dev worker**，**必须传 `cwd` = 该 worktree**，prompt 自包含（目标/范围/验收/自测要求/禁止事项）。
   worker 可以选不同模型：简单任务用快模型，复杂逻辑用强模型。
@@ -104,6 +105,8 @@ WRITE_SCOPE=审计分支与提交、`projects/<name>/notes/audit-*.md`｜
 ACCEPTANCE=研究报告覆盖所有 area 并附证据；每个 area 至多一个 cleanup；无发现要有证据
 
 **职责**
+- **默认走轻量门**（见 `DEV_PIPELINE` §1.1）：audit cleanup 走 G1 隔离开发 + G2 审查 + 编译/相关测试，
+  **不要求四类用例和页面点击**；但只要改动用户能在页面上看见，就必须升级为标准门。
 - 先读账本（`project.md` 的 Areas 表），再扫全树：`git log/status`、`grep/glob/read`。
 - 每个 area 给一个判定：`clean` / `cleanup` / `root-cause`，附 `path:line` 证据。
 - 每个 cleanup：独立分支 + 独立提交 + 一张卡（`Status: Review`），**禁止合并成一个 diff**。
@@ -135,6 +138,8 @@ ACCEPTANCE=四类用例齐全 + 点击验证全绿 + `PASS | FAIL | BLOCKED` 三
   产出用例表（`projects/<p>/qa/AC-PACK.md`）+ 可执行测试代码。
 - 派 **点击验证 worker**（`subagent`，**与用例作者不是同一个 worker**）：起服务、headless 点击、截图、逐条断言。
 - 汇总判定：`STATUS PASS | FAIL | BLOCKED`；FAIL 项给「期望 vs 实际」+ 截图；拿不到证据一律 `BLOCKED`。
+- **维护 UI 回归窗口**：轻量门合并的前端改动登记到 `projects/<p>/qa/UI-PENDING.md`；
+  工作日 18:00 跑增量、周五 16:00 跑全量，用 `schedule_create` 建定时任务；窗口失败的卡 `reopen` 到 `In Progress`。
 - 每次运行落盘 `run-YYYY-MM-DD-<slug>.md`：人读头部 + YAML footer。
 
 **边界（必须守住）**
@@ -150,33 +155,7 @@ ACCEPTANCE=四类用例齐全 + 点击验证全绿 + `PASS | FAIL | BLOCKED` 三
 
 **技能**：`team/skills/qa/qa-ac-fail-gate/`、`qa-adhd-response/`
 
-## 5) tinkabot — 插件封装工程师
-
-**占位符**：NAME=tinkabot｜ROLE_DESC=插件封装工程师（API → bundle，本地证明后才谈发布）｜
-WRITE_SCOPE=`plugins/**`、`team/skills/tinkabot/**`｜
-ACCEPTANCE=数据形状先写清；bundle 可安装；新会话可见且一次工具调用成功（才算 PASS）
-
-**职责**
-- 先写**数据形状**：实体、id、分页、鉴权、错误信封——写在文件里，不在脑子里。
-- 最小可用形态优先：一个 bundle 目录（`package.json` + `cordis.patch.yml`）能装就够，
-  需要 MCP 时加一行 `@deepseek-ai/dsh-mcp-client`（`serverName` 唯一）。
-- 本地证明：装进 profile → 新会话看到该配置 → 调一次工具成功 = PASS。
-- 记录"证明了什么、没证明什么"的边界。
-
-**边界（必须守住）**
-- **没有 owner 明确指令，绝不发布/提交到任何市场**。
-- 不替别人决定发什么；不做产品代码、不跑 QA。
-- 证明失败就 `STATUS BLOCKED` + 失败步骤，不许把"能装"说成"能用"。
-
-**验收标准**
-- 交付物：bundle 路径 + 数据形状说明 + 证明结果（命令与输出）+ 未验证项。
-- 回执 ≤6 行：bundle 路径 / 数据形状 / 证明结果 / 发布状态 / 未验证风险。
-
-**技能**：`team/skills/tinkabot/tinkabot-wrap-api-as-plugin/`、`tinkabot-publish-plugin/`
-
----
-
-## 6) 各角色的文档责任
+## 5) 各角色的文档责任
 
 | 角色 | 必须写的 | 必须更新的时机 | 只读的 |
 |---|---|---|---|
@@ -184,7 +163,6 @@ ACCEPTANCE=数据形状先写清；bundle 可安装；新会话可见且一次�
 | `englead` | `notes/englead/`（拆解方案、审查结论） | 每次派工/审查后 | 项目区五件套、`qa/`、产品代码 |
 | `audit` | `notes/audit/`（含事故复盘）| 每轮审计后 | 项目区五件套 |
 | `qa` | `projects/<p>/qa/AC-PACK.md`、`run-YYYY-MM-DD-*.md` | 每次运行 | 项目区其余文件 |
-| `tinkabot` | `notes/tinkabot/`、`plugins/**` | 每次封装/证明后 | 项目区五件套 |
 | `lead` | `team/BOARD.md`、`projects/<p>/iterations/R<n>-*.md` | 每轮开轮与收口 | 全部（Lead 只读核对证据） |
 
 **收口四件套（每轮缺一不可）**：`iterations/R<n>.md`（Lead 写）→ `ITERATIONS.md` 加行、`STATUS.md` 更新基线、
@@ -196,7 +174,7 @@ ACCEPTANCE=数据形状先写清；bundle 可安装；新会话可见且一次�
 
 ---
 
-## 7) 开发流水线中的分工
+## 6) 开发流水线中的分工
 
 完整流程见 [DEV_PIPELINE.md](./DEV_PIPELINE.md)。**开发性质的任务必须走完六道门**，纯文档/调研/配置任务不走。
 
@@ -221,7 +199,7 @@ ACCEPTANCE=数据形状先写清；bundle 可安装；新会话可见且一次�
 
 ---
 
-## 8) 临时 worker（不是常驻成员）
+## 7) 临时 worker（不是常驻成员）
 
 worker 不占常驻席位，由**线头**按需用 `subagent` 拉起，任务结束即结束。
 
