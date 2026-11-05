@@ -81,6 +81,8 @@ ACCEPTANCE=每张开发卡都有 worker 产出 + 审查结论 + 提交 SHA；合
   worker 可以选不同模型：简单任务用快模型，复杂逻辑用强模型。
 - worker 交回后做 **G2 审查**：两轴——标准轴（是否符合仓库既有规范）+ 规格轴（是否满足 `Acceptance`）。
   结论只有 `PASS` 或 `CHANGES`，`CHANGES` 逐条写「改什么、在哪、怎么算改好」。
+- **审查范围包含自动化测试**：测试是否覆盖新增/改动行为、断言是否有效、是否只覆盖 happy path。
+  没有测试的改动不收。
 - 审查通过后让 worker 在自己的 worktree 里 commit（作者仍是 worker，不是你）。
 - 汇总给 Lead：每卡的 `分支 / worktree / worker 产出 / 审查结论 / 提交 SHA / 剩余风险`。
 
@@ -135,9 +137,10 @@ ACCEPTANCE=四类用例齐全 + 点击验证全绿 + `PASS | FAIL | BLOCKED` 三
 
 **职责**
 - 把卡上的 `Acceptance` 变成**规范 AC 包**：每条标 `BLOCK` 或 `WARN`，断言点必须可程序化判定。
-- **出测试用例**是 qa 的产出责任：四类用例——正向 / 反向 / 边界 / 全流程——**缺一不可**，
-  写成用例表（`projects/<p>/qa/AC-PACK.md`）+ 可执行测试代码。量大时可以派 `qa-case worker` 起草，
-  **但定稿必须你自己审过**。
+- **出验收用例表**是 qa 的产出责任：正向 / 反向 / 边界 / 全流程四类——**缺一不可**，
+  写成**可点击的清单**（`projects/<p>/qa/AC-PACK.md`：步骤 / 期望 / 断言点）。
+  量大时可以派 `qa-case worker` 起草，**但定稿必须你自己审过**。
+  注意：自动化测试代码（pytest / e2e）归 dev worker，不归你；你出的是"人怎么验"，不是"机器怎么跑"。
 - **实际点击测试交给 worker**：派 `qa-click worker`（`subagent`）起服务、headless 点击、截图、逐条断言。
   用例由你出、点击由 worker 执行——写的人不跑，跑的人不写。
 - 汇总判定：`STATUS PASS | FAIL | BLOCKED`；FAIL 项给「期望 vs 实际」+ 截图；拿不到证据一律 `BLOCKED`。
@@ -209,8 +212,8 @@ worker 不占常驻席位，由**线头**按需用 `subagent` 拉起，任务结
 
 | worker | 谁拉起 | prompt 必须包含 | 产出 |
 |---|---|---|---|
-| `dev worker` | `englead` | `cwd`=worktree；只改卡内 Scope；**先 `codegraph impact/explore` 摸影响面**；改完**必跑 eslint/ruff/typecheck/相关测试**；不 push / 不 merge | 分支上的改动 + 自检原始输出 + 影响面结论 |
-| `qa-case worker` | `qa` | 四类用例；断言点可判定；先验证用例在未修复分支上会失败 | 用例表 + 测试代码 |
+| `dev worker` | `englead` | `cwd`=worktree；只改卡内 Scope；**先 `codegraph impact/explore` 摸影响面**；**必须产出 pytest 单测 + 页面改动配 e2e**；改完必跑 eslint/ruff/typecheck/测试；不 push / 不 merge | 改动 + 新增测试 + 自检原始输出 + 影响面结论 |
+| `qa-case worker` | `qa` | 四类验收用例；步骤可点、断言点可判定 | 可点击的用例表（qa 定稿） |
 | `qa-click worker` | `qa` | 用 `codegraph affected` 圈定范围；起服务并等就绪；headless 逐条点击；截图落盘；断言判定 | `PASS/FAIL` 清单 + 截图路径 |
 
 硬规则：

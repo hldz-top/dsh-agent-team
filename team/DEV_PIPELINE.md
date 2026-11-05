@@ -15,10 +15,10 @@ G0 立项 ──► G1 隔离开发 ──► G2 独立审查 ──► G3 提�
 | 门 | 谁做 | 产物 | 不通过会怎样 |
 |---|---|---|---|
 | **G0 立项** | `pm` | 任务卡：`Scope / Acceptance / 分支名 / worktree 名` | 验收不可判定 → 不许开工 |
-| **G1 隔离开发** | `dev worker`（`englead` 派） | 独立分支 + worktree 的改动 + **自检门通过**（见 §2.5） | 自检红 → 自己修，不进 G2 |
+| **G1 隔离开发** | `dev worker`（`englead` 派） | 改动 + **自动化测试（pytest / e2e）** + 自检门全过（§2.5） | 自检红或缺测试 → 自己修，不进 G2 |
 | **G2 独立审查** | `englead`（开发线负责人本人，不写代码故天然非作者） | `PASS` 或 `CHANGES` + 问题清单 | `CHANGES` → 回 G1，附逐条问题 |
 | **G3 提交** | `dev worker` | 分支上的提交（审查通过后才 commit） | — |
-| **G4 QA 生成用例** | `qa` 派 `qa-case worker`（`subagent`） | 正向 / 反向 / 边界 / 全流程 四类用例 + 可执行测试 | 用例覆盖不足 → 打回补 |
+| **G4 验收用例表** | `qa`（可派 `qa-case worker` 起草，qa 定稿） | 正向 / 反向 / 边界 / 全流程 四类**可点击的用例表** | 缺类或断言不可判定 → 打回补 |
 | **G5 页面点击验证** | `qa` 派 `qa-click worker`（与 G4 不是同一个 worker） | 逐用例点击结果 + 截图证据 + `PASS/FAIL` | 任一 FAIL → 回 G1 |
 | **G6 合并收口** | `lead` | 合并到主分支 + 删开发分支 + 删 worktree + 账本更新 | 门禁未全绿 → 不合并 |
 
@@ -78,17 +78,21 @@ working_directory { cd: "../wt-<slug>" }
 
 worker 改完代码**必须**跑仓库自己的检查，把命令与输出原样贴进回执；**没跑 = G1 未完成**。
 
-| 栈 | 至少跑 |
-|---|---|
-| JS / TS | `eslint`（或仓库 `pnpm lint`）、`tsc --noEmit` / `typecheck`、改动的相关测试 |
-| Python | `ruff check`（+ `ruff format --check`）、`mypy`（仓库有才跑）、`pytest` 相关用例 |
-| 其它 | 仓库 README / CI 配置里定义的等价命令 |
+**测试是交付物，不是可选项。** 每个开发单元必须带自动化测试：
+
+| 栈 | 必须产出 | 必须跑 |
+|---|---|---|
+| Python | `pytest` 用例（新增/改动行为至少一条正向 + 一条反向） | `ruff check`、`pytest` 相关与新增用例 |
+| JS / TS | 单测（vitest/jest）+ 涉及页面的 **e2e**（playwright） | `eslint`、`tsc --noEmit`、相关测试 |
+| 其它 | 仓库既有测试框架的等价物 | 仓库 README / CI 定义的命令 |
 
 规则：
 1. **命令从仓库里发现**（`package.json` scripts、`pyproject.toml`、`Makefile`、CI 配置），不要猜。
 2. 可以跳过**全仓**检查，但**自己改动的文件必须过**；跳过的写清理由。
 3. 任何一项红 → 自己修完再交，不许把红结果丢给 englead。
 4. 回执贴**原始输出**或失败行，不接受「已通过」。
+5. **工具没配置不阻塞流程**：仓库没有 eslint/ruff/pytest 就写一行 `tooling: <name> not configured`
+   并给补配置的建议，继续往下走；**不许因为没工具就不写测试**，没有框架就用最小可运行脚本验证。
 
 ### 2.6 codeGraph（开发与审查的必备依据）
 
@@ -101,13 +105,18 @@ worker 改完代码**必须**跑仓库自己的检查，把命令与输出原样
 | 评估影响面 | `codegraph impact <symbol> -p <主仓>` | dev worker + englead 审查 |
 | 找受影响测试 | `codegraph affected <changed files...> -p <主仓>` | qa 定回归范围、dev worker 自测 |
 
-规则：
-1. **索引建在主仓**（`codegraph init <主仓>`）；worktree 里用 `-p <主仓>` + 相对路径查询，
-   索引共享，不必每个 worktree 重建。合并后由 Lead 跑一次 `codegraph sync <主仓>`。
-2. 改动前必须先 `explore` 或 `impact` 一次，回执里贴关键结论（影响文件数、调用方数量）。
-3. englead 审查时用 `impact` 核对"作者声称的影响面"是否属实。
-4. qa 用 `affected` 决定回归范围，避免全量重跑。
-5. 项目没初始化 codegraph → 卡里记一行 `codegraph: not initialized`，退回 `grep`/`glob`，**不许假装用过**。
+**索引策略（混合方案）**：
+
+1. **默认查主仓索引**：`codegraph explore|impact|callers -p <主仓>`，worktree 里用相对路径即可——
+   索引共享，不重建。改动前的结构理解、改动后的影响面核对都走这条。
+2. **需要看新增符号时才建临时索引**：本次改动新增了对外符号（导出函数 / 接口 / 可被引用的类型）
+   且要评估其影响面，就在 worktree 里跑一次 `codegraph init`，用完 `rm -rf .codegraph`
+   （或确认它已被忽略）。不要每个任务都 init，也不要把它带进提交。
+3. **合并后由 Lead 跑一次** `codegraph sync <主仓>`，让主仓索引追上。
+4. 改动前必须先 `explore` 或 `impact` 一次，回执里贴关键结论（影响文件数、调用方数量）。
+5. englead 审查时用 `impact` 核对作者声称的影响面是否属实。
+6. qa 用 `affected` 决定回归范围，避免全量重跑。
+7. 项目没初始化 codegraph → 卡里记一行 `codegraph: not initialized`，退回 `grep`/`glob`，**不许假装用过**。
 
 ---
 
@@ -137,7 +146,10 @@ VERDICT: PASS | CHANGES
 
 ## 4. G4：QA 生成用例（由 qa 的 worker 做）
 
-`qa` 是验收线负责人，**不亲手写测试**。它用 `subagent` 起用例生成 worker：
+> **分工**：自动化测试（pytest / e2e）由 **dev worker 在 G1 产出**；这一环产出的是**验收用例表**——
+> 人工可点、按用户视角判断的清单。两者不重复：前者防回归，后者判这一版能不能发。
+
+`qa` 是验收线负责人，它出用例表（可派 `subagent` 起草，但定稿必须 qa 审过）：
 
 ```
 qa → subagent(prompt = 生成四类用例的完整任务, cwd = 该任务 worktree)
