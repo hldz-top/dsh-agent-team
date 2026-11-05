@@ -15,7 +15,7 @@ G0 立项 ──► G1 隔离开发 ──► G2 独立审查 ──► G3 提�
 | 门 | 谁做 | 产物 | 不通过会怎样 |
 |---|---|---|---|
 | **G0 立项** | `pm` | 任务卡：`Scope / Acceptance / 分支名 / worktree 名` | 验收不可判定 → 不许开工 |
-| **G1 隔离开发** | `dev worker` | 独立分支 + 独立 worktree 里的改动 | 自测失败 → 自己修，不进 G2 |
+| **G1 隔离开发** | `dev worker`（`englead` 派） | 独立分支 + worktree 的改动 + **自检门通过**（见 §2.5） | 自检红 → 自己修，不进 G2 |
 | **G2 独立审查** | `englead`（开发线负责人本人，不写代码故天然非作者） | `PASS` 或 `CHANGES` + 问题清单 | `CHANGES` → 回 G1，附逐条问题 |
 | **G3 提交** | `dev worker` | 分支上的提交（审查通过后才 commit） | — |
 | **G4 QA 生成用例** | `qa` 派 `qa-case worker`（`subagent`） | 正向 / 反向 / 边界 / 全流程 四类用例 + 可执行测试 | 用例覆盖不足 → 打回补 |
@@ -73,7 +73,41 @@ working_directory { cd: "../wt-<slug>" }
 
 - 只改自己卡里的 `Scope`；跨文件需求 → 回 Lead 拆卡。
 - 不 push、不 merge、不切回主分支。
-- 自测：改什么跑什么（lint / typecheck / 相关测试），命令与输出进回执。
+
+### 2.5 自检门（G1 的退出条件，不是可选项）
+
+worker 改完代码**必须**跑仓库自己的检查，把命令与输出原样贴进回执；**没跑 = G1 未完成**。
+
+| 栈 | 至少跑 |
+|---|---|
+| JS / TS | `eslint`（或仓库 `pnpm lint`）、`tsc --noEmit` / `typecheck`、改动的相关测试 |
+| Python | `ruff check`（+ `ruff format --check`）、`mypy`（仓库有才跑）、`pytest` 相关用例 |
+| 其它 | 仓库 README / CI 配置里定义的等价命令 |
+
+规则：
+1. **命令从仓库里发现**（`package.json` scripts、`pyproject.toml`、`Makefile`、CI 配置），不要猜。
+2. 可以跳过**全仓**检查，但**自己改动的文件必须过**；跳过的写清理由。
+3. 任何一项红 → 自己修完再交，不许把红结果丢给 englead。
+4. 回执贴**原始输出**或失败行，不接受「已通过」。
+
+### 2.6 codeGraph（开发与审查的必备依据）
+
+`codegraph`（本机已装，1.4.1，支持 CLI 与 `serve --mcp`）提供符号搜索、调用链、影响面、受影响测试。
+
+| 场景 | 命令 | 谁用 |
+|---|---|---|
+| 改前摸结构 | `codegraph explore "<区域/功能>" -p <主仓>` | dev worker |
+| 看调用链 | `codegraph node <symbol> -p <主仓>`、`codegraph callers|callees <symbol> -p <主仓>` | dev worker |
+| 评估影响面 | `codegraph impact <symbol> -p <主仓>` | dev worker + englead 审查 |
+| 找受影响测试 | `codegraph affected <changed files...> -p <主仓>` | qa 定回归范围、dev worker 自测 |
+
+规则：
+1. **索引建在主仓**（`codegraph init <主仓>`）；worktree 里用 `-p <主仓>` + 相对路径查询，
+   索引共享，不必每个 worktree 重建。合并后由 Lead 跑一次 `codegraph sync <主仓>`。
+2. 改动前必须先 `explore` 或 `impact` 一次，回执里贴关键结论（影响文件数、调用方数量）。
+3. englead 审查时用 `impact` 核对"作者声称的影响面"是否属实。
+4. qa 用 `affected` 决定回归范围，避免全量重跑。
+5. 项目没初始化 codegraph → 卡里记一行 `codegraph: not initialized`，退回 `grep`/`glob`，**不许假装用过**。
 
 ---
 
@@ -153,23 +187,21 @@ G5 的点击 worker 必须**另起一个**（`qa-click worker`），与用例作
 
 **一律 headless**：不弹有头窗口抢占桌面。每张截图落 `notes/qa/screenshots/YYYY-MM-DD-HHmm-<场景>-<序号>.png`。
 
-### 5.1 批量回归窗口（UI-PENDING 队列）
+### 5.1 UI 回归（由用户决定何时跑）
 
-走**轻量门**合并的前端改动不进 G5，改为登记到 `projects/<p>/qa/UI-PENDING.md`，
-由 `qa` 在固定窗口批量补验证——避免每次小改动都单独起一轮浏览器。
+UI 回归**不排固定时间**。轻量门合并的前端改动照样登记到 `projects/<p>/qa/UI-PENDING.md` 排队，
+但**不自动起浏览器**——什么时候跑由用户说了算。
 
-| 窗口 | 频率 | 范围 |
-|---|---|---|
-| 每日增量 | 工作日 18:00 | 上次窗口之后新增的队列行 |
-| 每周全量 | 周五 16:00 | 队列全部 + 本周合并的所有 UI 改动 |
-
-流程：`qa` 派 `qa-click worker` → 按队列逐条点击验证 → 全绿的行移到「已归档」并写验证日期；
-失败的行标 `FAIL`，**把对应卡 `reopen` 到 `In Progress`**，附截图与「期望 vs 实际」。
+1. 一批活收口后，Lead 向用户报告：`已合并 N 条，其中 UI 未验证 M 条（队列见 qa/UI-PENDING.md）`；
+2. 用户决定：现在跑 / 稍后跑 / 只跑其中几条；
+3. 用户说跑 → `qa` 派 `qa-click worker` 执行（默认全队列，也可只跑用户指定的子集）；
+4. 全绿的行移到「已归档」；失败的行标 `FAIL`，**把对应卡 `reopen` 到 `In Progress`**，附「期望 vs 实际」+ 截图。
 
 硬规则：
-- 队列积压 > 20 行，或最早一行超过 7 天未验证 → **暂停用轻量门合并前端改动**，回到标准门。
+- **不许自己定时间表跑**——跑不跑、什么时候跑，用户决定。
+- 队列积压 > 20 行，或最早一行超过 7 天未验证 → Lead 必须**主动提醒用户**，并建议暂停轻量门。
 - 每行必须写「影响页面/路由 + 建议验证点」，否则 qa 无法复现。
-- 窗口验证跑的是**合并后的主分支**，不是开发分支——那才是用户实际看得到的东西。
+- 验证跑的是**合并后的主分支**，不是开发分支。
 
 ---
 
@@ -217,6 +249,7 @@ git push origin main            # 需要用户已授权推送
 | 独立分支 + 独立 worktree | ✅ 可用 | `create_worktree` 工具在会话工具集里；兜底 `bash git worktree add` + `working_directory` |
 | 并发 worker | ✅ 不受团队席位限制 | worker 是 `subagent`，并发由子代理并行容量决定（可在设置页调） |
 | 独立审查（subagent） | ✅ 可用 | `subagent` 工具在工具集里 |
+| 代码图谱（codegraph） | ✅ 可用 | CLI `codegraph 1.4.1` 已安装；`serve --mcp` 可接 DSH；多项目在用 |
 | QA 生成测试用例 | ✅ 可用 | qa 用 `subagent` 起 worker；写测试代码是普通文件操作 |
 | **页面点击验证** | ❌ **当前不可用** | 浏览器 MCP（playwright-host）**未启动**：端口 18081 无监听，工具集里没有 `mcp__playwright-host__*` |
 | 合并 + 删分支 | ✅ 可用 | `bash git`；需用户授权推送 |

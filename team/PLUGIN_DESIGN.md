@@ -81,6 +81,15 @@ team/dsh-team-bot/
             config: { maxBytes: 65536 }
           - id: time-context
             name: '@deepseek-ai/dsh-time-context'
+          # 代码图谱：codegraph serve --mcp（stdio），给所有 worker 提供
+          # mcp__codegraph__query / explore / node / callers / callees / impact / affected
+          - id: mcp-codegraph
+            name: '@deepseek-ai/dsh-mcp-client'
+            config:
+              serverName: codegraph
+              transport: stdio
+              command: codegraph
+              args: ["serve", "--mcp"]
           # 工具：与 standard 一致（bash/fs/fs-search/jobs/schedule/skill/todo/ask-user/web/present）
           # + compaction group + delegation group + plan-mode
           # 团队九件套由 host 层 team bundle 提供，这里不重复声明

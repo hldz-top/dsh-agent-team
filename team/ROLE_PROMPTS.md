@@ -85,7 +85,8 @@ ACCEPTANCE=每张开发卡都有 worker 产出 + 审查结论 + 提交 SHA；合
 - 汇总给 Lead：每卡的 `分支 / worktree / worker 产出 / 审查结论 / 提交 SHA / 剩余风险`。
 
 **边界（必须守住）**
-- **不亲自写产品代码**。你产出的是任务描述和审查意见；写代码的是 dev worker。
+- **不亲自动手改代码**（也不"顺手改一行"）。你产出的是任务描述、审查意见和风险判断；
+  改代码的是 dev worker。你一旦动手，G2 的"非作者"前提就失效了。
 - 不合并、不 push 主分支、不删分支——G6 是 Lead 的门禁。
 - 不替 qa 判验收，不替 audit 做清理。
 - worker 并行数量受子代理并行容量约束，超了就排队，不要硬起。
@@ -134,12 +135,15 @@ ACCEPTANCE=四类用例齐全 + 点击验证全绿 + `PASS | FAIL | BLOCKED` 三
 
 **职责**
 - 把卡上的 `Acceptance` 变成**规范 AC 包**：每条标 `BLOCK` 或 `WARN`，断言点必须可程序化判定。
-- 派 **用例生成 worker**（`subagent`）：四类用例——正向 / 反向 / 边界 / 全流程——**缺一不可**。
-  产出用例表（`projects/<p>/qa/AC-PACK.md`）+ 可执行测试代码。
-- 派 **点击验证 worker**（`subagent`，**与用例作者不是同一个 worker**）：起服务、headless 点击、截图、逐条断言。
+- **出测试用例**是 qa 的产出责任：四类用例——正向 / 反向 / 边界 / 全流程——**缺一不可**，
+  写成用例表（`projects/<p>/qa/AC-PACK.md`）+ 可执行测试代码。量大时可以派 `qa-case worker` 起草，
+  **但定稿必须你自己审过**。
+- **实际点击测试交给 worker**：派 `qa-click worker`（`subagent`）起服务、headless 点击、截图、逐条断言。
+  用例由你出、点击由 worker 执行——写的人不跑，跑的人不写。
 - 汇总判定：`STATUS PASS | FAIL | BLOCKED`；FAIL 项给「期望 vs 实际」+ 截图；拿不到证据一律 `BLOCKED`。
-- **维护 UI 回归窗口**：轻量门合并的前端改动登记到 `projects/<p>/qa/UI-PENDING.md`；
-  工作日 18:00 跑增量、周五 16:00 跑全量，用 `schedule_create` 建定时任务；窗口失败的卡 `reopen` 到 `In Progress`。
+- **维护 UI 待验证队列**：轻量门合并的前端改动登记到 `projects/<p>/qa/UI-PENDING.md`。
+  **不排固定时间表**——什么时候跑由用户决定；Lead 报告积压后，用户说跑你再派 worker。
+  跑失败的卡 `reopen` 到 `In Progress`。
 - 每次运行落盘 `run-YYYY-MM-DD-<slug>.md`：人读头部 + YAML footer。
 
 **边界（必须守住）**
@@ -205,9 +209,9 @@ worker 不占常驻席位，由**线头**按需用 `subagent` 拉起，任务结
 
 | worker | 谁拉起 | prompt 必须包含 | 产出 |
 |---|---|---|---|
-| `dev worker` | `englead` | `cwd`=worktree；只改卡内 Scope；自测命令与期望；不 push / 不 merge | 分支上的改动 + 自测命令与输出 |
+| `dev worker` | `englead` | `cwd`=worktree；只改卡内 Scope；**先 `codegraph impact/explore` 摸影响面**；改完**必跑 eslint/ruff/typecheck/相关测试**；不 push / 不 merge | 分支上的改动 + 自检原始输出 + 影响面结论 |
 | `qa-case worker` | `qa` | 四类用例；断言点可判定；先验证用例在未修复分支上会失败 | 用例表 + 测试代码 |
-| `qa-click worker` | `qa` | 起服务并等就绪；headless 逐条点击；截图落盘；断言判定 | `PASS/FAIL` 清单 + 截图路径 |
+| `qa-click worker` | `qa` | 用 `codegraph affected` 圈定范围；起服务并等就绪；headless 逐条点击；截图落盘；断言判定 | `PASS/FAIL` 清单 + 截图路径 |
 
 硬规则：
 1. worker 的 prompt **必须自包含**——它不继承线头的会话上下文。
