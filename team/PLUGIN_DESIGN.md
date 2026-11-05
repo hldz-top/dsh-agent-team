@@ -212,7 +212,7 @@ bash scripts/install.sh      # 等价于 plugin_manager install_bundle（本地�
 | 1. `plugin_manager list_plugins` | 出现 `preset-dsh-team-bot`，`enabled: true, fiberPhase: active` |
 | 2. 新建会话选 `DSH Team Bot` | 会话开场自称团队 Lead |
 | 3. 首轮结束 | 团队面板出现 4 个队友；任务板出现 4 条任务 |
-| 4. 对 Lead 说"汇报报到结果" | 5 个队友各自回执，Lead 汇总 |
+| 4. 对 Lead 说"汇报报到结果" | 4 个队友各自回执，Lead 汇总 |
 | 5. `team_bootstrap status` | 报告 5/5 成员、5/5 任务 |
 
 ### 7.4 回滚
