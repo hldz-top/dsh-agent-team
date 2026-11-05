@@ -3,7 +3,7 @@
 - Id: team-sandbox
 - Status: shipped
 - Owner: 用户
-- Goal: 修复 team-sandbox 与 docs/API.md 契约不符的两处缺陷——空标题必须 400、列表必须最新在前——并补齐自动化测试。
+- Goal: 修复 team-sandbox 与 docs/API.md 不符的三处契约偏差——空标题必须 400、列表必须最新在前、标题 20 字符上限——并补齐自动化测试。
 - Success criteria:
   - [x] `bash scripts/ci.sh --fast` 退出码 0（合并后主仓 `--full` 亦 PASS，11 passed，2026-11-05 21:40）。
   - [x] `POST /api/todos` 收到去空白后为空的标题（`""`、`"   "`）返回 `400`、响应体 `{"error": "title required"}`，且不新增条目。
