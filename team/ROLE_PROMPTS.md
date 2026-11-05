@@ -190,3 +190,25 @@ ACCEPTANCE=数据形状先写清；bundle 可安装；新会话可见且一次�
 **写之前先问自己**：这条信息换了会话还需要知道吗？
 - 需要 → 写账本（`projects/`）。
 - 不需要，只是这次协调 → 写任务板（`team_task_*`），不落文档。
+
+---
+
+## 7) 开发流水线中的分工
+
+完整流程见 [DEV_PIPELINE.md](./DEV_PIPELINE.md)。**开发性质的任务必须走完六道门**，纯文档/调研/配置任务不走。
+
+| 门 | 角色 | 产出 | 关键约束 |
+|---|---|---|---|
+| G0 立项 | `pm` | 卡：`Scope / Acceptance / 分支名 / worktree 名` | `Scope` 重叠必须拆卡；`Acceptance` 不可判定不许开工 |
+| G1 隔离开发 | `dev worker`（Lead 派 teammate） | 独立分支 + 独立 worktree 的改动 + 自测输出 | 只改卡内 `Scope`；不 push、不 merge、不切回主干 |
+| G2 独立审查 | `reviewer`（Lead 派 `subagent`） | `VERDICT: PASS \| CHANGES` + 两轴问题清单 | **不能是作者本人**；`CHANGES` 必须逐条可执行 |
+| G3 提交 | `dev worker` | 分支上的提交 | 审查通过后才 commit |
+| G4 用例 | `qa`（用 `subagent` 起 worker） | 正向/反向/边界/全流程四类用例 + 测试代码 | 四类缺一不进 G5；断言点可程序化判定 |
+| G5 点击验证 | `qa worker` | 逐用例点击结果 + 截图 + `PASS/FAIL` | headless；任一 FAIL → 回 G1 全量重跑 |
+| G6 合并 | `lead` | 合并提交 + 删分支 + 删 worktree + 账本 | 三份证据齐全才合并；**不能是作者** |
+
+**能力事实**：`qa` 与 `reviewer` 都用 `subagent`（一次性，不占团队名额）；`dev worker` 用 `spawn_teammate`（占名额）。
+团队 `maxMembers=8`，五个固定角色后**并发 dev worker 上限 3**，超出的卡排队。
+
+**当前阻塞**：浏览器点击验证依赖 `playwright-host` MCP（端口 18081），**当前未启动**，工具集里没有对应工具。
+恢复前 G5 只能降级为接口级验证 + 手动截图，并必须在报告里标 `G5-DEGRADED`。
