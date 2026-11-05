@@ -10,7 +10,7 @@
 
 **目标**
 1. Preset id = `dsh-team-bot`，插件包名 = `dsh-team-bot`（同一个名字，两处引用）。
-2. 选中该 preset 的新会话，**首轮自动**建好团队：5 条任务板任务 + 5 个 teammate，顺序固定。
+2. 选中该 preset 的新会话，**首轮自动**建好团队：4 条任务板任务 + 4 个 teammate，顺序固定。
 3. 团队规范、角色文本、文档机制继续从 `team/` 读（**提示词不硬编码进插件**，只硬编码"去哪读"）。
 4. 可开发：改 JS 不改包结构，重装即可生效；有验证清单。
 
@@ -211,7 +211,7 @@ bash scripts/install.sh      # 等价于 plugin_manager install_bundle（本地�
 |---|---|
 | 1. `plugin_manager list_plugins` | 出现 `preset-dsh-team-bot`，`enabled: true, fiberPhase: active` |
 | 2. 新建会话选 `DSH Team Bot` | 会话开场自称团队 Lead |
-| 3. 首轮结束 | 团队面板出现 5 个队友；任务板出现 5 条任务 |
+| 3. 首轮结束 | 团队面板出现 4 个队友；任务板出现 4 条任务 |
 | 4. 对 Lead 说"汇报报到结果" | 5 个队友各自回执，Lead 汇总 |
 | 5. `team_bootstrap status` | 报告 5/5 成员、5/5 任务 |
 

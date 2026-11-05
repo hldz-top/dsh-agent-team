@@ -14,7 +14,7 @@
 
 1. **确认工作区**：确定本轮工作区路径与事实源（哪些文件是真相、哪些是产物），写进 §2 的 `{{WORKSPACE}}`。
 2. **建任务板**：每个角色 1 个 Phase 任务，描述里写清 目标 / 验收标准 / `write_scopes` / 依赖（`blocked_by`）。
-   → `team_task_create`，一次建 5 条。**不建任务就不 spawn**：没有任务的成员只能空转。
+   → `team_task_create`，一次建 4 条。**不建任务就不 spawn**：没有任务的成员只能空转。
 3. **逐角色 spawn**，顺序固定：
    `pm` → `englead` → `qa` → `audit`
    （有依赖关系时用 `blocked_by` 表达，不要靠 spawn 顺序表达）。
@@ -210,6 +210,6 @@ G0 立项(pm) → G1 隔离开发(englead 派 dev worker) → G2 独立审查(en
 1. 新开会话，把本文件路径发给 Lead：
    `<TEAM_DIR>/team/TEAM_PROMPT.md`
 2. 说一句：**"按 TEAM_PROMPT.md 初始化四人团队，然后汇报报到结果"**
-3. Lead 会：建 5 条任务 → 按 §3 逐个 spawn → 等回执 → 把报到结论写进 `BOARD.md`。
+3. Lead 会：建 4 条任务 → 按 §3 逐个 spawn → 等回执 → 把报到结论写进 `BOARD.md`。
 4. 之后的活都按同一句派：**"把 <目标> 建成任务派给对应角色"**。
 5. 旧会话的团队会一直占着名额；换会话就重建，不要想着"继承上一个会话的队友"。
