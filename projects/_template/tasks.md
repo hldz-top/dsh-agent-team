@@ -13,6 +13,7 @@
 - Status: Todo
 - Owner: unowned | pm | englead | audit | qa
 - Scope: <本卡可写的仓库相对路径>
+- Ports: <englead 分配，如 3000-3099；无服务则写 none>
 - Depends on: none
 - Blocked by: none
 - Acceptance: <二值、可判定的完成条件>

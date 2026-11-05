@@ -17,7 +17,7 @@ G0 立项 ──► G1 隔离开发 ──► G2 独立审查 ──► G3 提�
 | **G0 立项** | `pm` | 任务卡：`Scope / Acceptance / 分支名 / worktree 名` | 验收不可判定 → 不许开工 |
 | **G1 隔离开发** | `dev worker`（`englead` 派） | 改动 + **自动化测试（pytest / e2e）** + 自检门全过（§2.5） | 自检红或缺测试 → 自己修，不进 G2 |
 | **G2 独立审查** | `englead`（开发线负责人本人，不写代码故天然非作者） | `PASS` 或 `CHANGES` + 问题清单 | `CHANGES` → 回 G1，附逐条问题 |
-| **G3 提交** | `dev worker` | 分支上的提交（审查通过后才 commit） | — |
+| **G3 提交** | `dev worker` | 分支上的提交，信息格式 `<type>(<scope>): 中文摘要` | 未过审查不许 commit |
 | **G4 验收用例表** | `qa`（可派 `qa-case worker` 起草，qa 定稿） | 正向 / 反向 / 边界 / 全流程 四类**可点击的用例表** | 缺类或断言不可判定 → 打回补 |
 | **G5 页面点击验证** | `qa` 派 `qa-click worker`（与 G4 不是同一个 worker） | 逐用例点击结果 + 截图证据 + `PASS/FAIL` | 任一 FAIL → 回 G1 |
 | **G6 合并收口** | `lead` | 合并到主分支 + 删开发分支 + 删 worktree + 账本更新 | 门禁未全绿 → 不合并 |
@@ -118,6 +118,17 @@ worker 改完代码**必须**跑仓库自己的检查，把命令与输出原样
 6. qa 用 `affected` 决定回归范围，避免全量重跑。
 7. 项目没初始化 codegraph → 卡里记一行 `codegraph: not initialized`，退回 `grep`/`glob`，**不许假装用过**。
 
+### 2.7 并发隔离：端口与本地环境
+
+并发 worker 各自起服务时，**端口必须隔离**，否则 e2e 与 dev server 互相踩。
+
+1. `englead` 拆细卡时**分配端口段**并写进卡的 `Ports:` 字段（如 `3000-3099`），两个在跑的卡不许重叠。
+2. worker 在自己的 worktree 里用 **`.env.local`**（或等价本地覆盖文件）改端口，**`.env.local` 不进提交**
+   （确认仓库已忽略它，没有就加一条忽略规则，别把本地端口写进产品配置）。
+3. e2e 的 `baseURL` **必须从环境变量读**（如 `E2E_BASE_URL`），不许硬编码 `localhost:3000`。
+4. 起服务后先探活（端口 listen / `/health` 200），再跑 e2e；跑完关服务，端口交还。
+5. 3 个并发 worker 的最小可行端口分配：`3000-3099` / `3100-3199` / `3200-3299`。
+
 ---
 
 ## 3. G2：独立审查
@@ -141,6 +152,9 @@ VERDICT: PASS | CHANGES
 ```
 
 `CHANGES` 必须逐条可执行；`WARN` 不阻塞合并但要在 G6 记录。
+
+**提交信息格式**：`<type>(<scope>): 中文摘要`，type ∈ `feat|fix|refactor|test|docs|chore`。
+一个任务一个提交即可；审查过程中的修正合并进这一个提交（worker 在自己分支上可以 `--amend`）。
 
 ---
 
@@ -225,13 +239,14 @@ UI 回归**不排固定时间**。轻量门合并的前端改动照样登记到 
 # 1) 确认门禁证据都在（Lead 只读核对）
 #    审查报告: PASS | QA 用例表: 四类齐全 | 点击验证: 全 PASS 且有截图
 
-# 2) 合并（一个任务一个提交，保持主干线性）
+# 2) 合并：固定 --no-ff，一个任务一个合并提交
 git switch main && git pull --ff-only
 git merge --no-ff <type>/<slug>-<yyyymmdd> -m "<type>(<scope>): <中文摘要>"
 
-# 3) 收口：删分支 + 删 worktree
+# 3) 收口：删分支 + 删 worktree + 同步代码图谱索引
 git worktree remove ../wt-<slug> --force
 git branch -d <type>/<slug>-<yyyymmdd>
+codegraph sync <主仓>
 git push origin main            # 需要用户已授权推送
 
 # 4) 账本

@@ -144,7 +144,12 @@ G0 立项(pm) → G1 隔离开发(englead 派 dev worker) → G2 独立审查(en
 
 - **分档**：标准门（产品代码 / 用户可见的改动）走完 G0–G6；轻量门（audit cleanup、非 UI 重构、文档配置）
   走 G0–G3 + 编译测试，跳过 G4/G5；**用户能在页面上看见的改动不许走轻量门**。
-- **自检**：worker 改完必须跑仓库自己的检查（`eslint` / `ruff` / `tsc` / 相关测试），红了不许交审查。
+- **自检**：worker 改完必须跑仓库自己的检查（`eslint` / `ruff` / `tsc` / 相关测试），红了不许交审查；
+  工具没配置只记建议，不阻塞。
+- **并发隔离**：englead 拆卡时分配端口段写进 `Ports:`，worker 用 `.env.local` 覆盖（不进提交），
+  e2e 的 `baseURL` 从环境变量读。
+- **提交与合并**：提交格式 `<type>(<scope>): 中文摘要`；合并固定 `--no-ff`（一个任务一个合并提交，
+  可反查、可整体回滚）；合并后 Lead 跑 `codegraph sync <主仓>`。
 - **查图**：开发前用 `codegraph explore/impact` 摸影响面，审查时用 `impact` 核对，qa 用 `affected` 圈回归范围。
 - **补验证**：轻量门合并的前端改动进 `qa/UI-PENDING.md`；**什么时候跑由用户决定**（Lead 在活收口后报积压）；
   积压 >20 行或超 7 天未验证 → Lead 主动提醒并建议暂停轻量门。
